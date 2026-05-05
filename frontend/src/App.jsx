@@ -5,8 +5,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Movimientos from './pages/Movimientos';
-import Arqueos from './pages/Arqueos';
 import AdminDashboard from './pages/AdminDashboard';
+import Cierres from './pages/Cierres';
 
 function App() {
   return (
@@ -35,10 +35,10 @@ function App() {
               }
             />
             <Route
-              path="/arqueos"
+              path="/cierres"
               element={
                 <ProtectedRoute allowedRoles={['CAJERO_SEDE']}>
-                  <Arqueos />
+                  <Cierres />
                 </ProtectedRoute>
               }
             />

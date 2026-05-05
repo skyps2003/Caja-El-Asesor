@@ -50,6 +50,7 @@ const AdminDashboard = () => {
   const [cajas, setCajas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const cargarDatos = async () => {
     try {
@@ -182,9 +183,18 @@ const AdminDashboard = () => {
                 {tabActiva === 'sedes' && 'Lista de Sedes'}
                 {tabActiva === 'cajas' && 'Lista de Cajas'}
               </h2>
-              <button onClick={() => handleOpenModal(tabActiva.slice(0, -1))} className="btn-primario">
-                + Crear Nuevo
-              </button>
+              <div className="flex gap-4 items-center">
+                <input
+                  type="text"
+                  placeholder="Buscar..."
+                  className="input-field !h-10 !w-64 !text-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                <button onClick={() => handleOpenModal(tabActiva.slice(0, -1))} className="btn-primario">
+                  + Crear Nuevo
+                </button>
+              </div>
             </div>
 
             <div className="table-wrapper">
@@ -219,7 +229,10 @@ const AdminDashboard = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {tabActiva === 'usuarios' && usuarios.map(u => (
+                    {tabActiva === 'usuarios' && usuarios.filter(u => 
+                      u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      u.login_usuario.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map(u => (
                       <tr key={u._id} className="table-row">
                         <td className="py-3 px-4 font-medium">{u.nombre}</td>
                         <td className="py-3 px-4 text-xs font-mono">{u.login_usuario}</td>
@@ -231,7 +244,10 @@ const AdminDashboard = () => {
                         </td>
                       </tr>
                     ))}
-                    {tabActiva === 'sedes' && sedes.map(s => (
+                    {tabActiva === 'sedes' && sedes.filter(s => 
+                      s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      s.direccion.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map(s => (
                       <tr key={s._id} className="table-row">
                         <td className="py-3 px-4 font-medium">{s.nombre}</td>
                         <td className="py-3 px-4">{s.direccion}</td>
@@ -242,7 +258,10 @@ const AdminDashboard = () => {
                         </td>
                       </tr>
                     ))}
-                    {tabActiva === 'cajas' && cajas.map(c => (
+                    {tabActiva === 'cajas' && cajas.filter(c => 
+                      c.nombre_caja.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                      c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
+                    ).map(c => (
                       <tr key={c._id} className="table-row">
                         <td className="py-3 px-4 font-mono font-bold text-xs" style={{ color: 'var(--c-accion)' }}>{c.codigo}</td>
                         <td className="py-3 px-4 font-medium">{c.nombre_caja}</td>

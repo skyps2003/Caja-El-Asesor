@@ -42,13 +42,13 @@ const StatCard = ({ icon: Icon, label, value, color, delay = '' }) => (
     <p className="text-3xl font-bold" style={{ color }}>{value}</p>
   </div>
 );
+
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     const dataExtra = payload[0].payload;
     return (
       <div className="p-3 rounded-xl border" style={{ background: 'var(--c-fondo-card)', borderColor: 'var(--c-borde)', boxShadow: '0 10px 25px var(--c-sombra)' }}>
-
-        {/* Aquí mostramos "001 - Nombre de la Caja" */}
+        {/* Mostramos "001 - Nombre de la Caja" */}
         <p className="text-sm font-bold mb-2" style={{ color: 'var(--c-primario)' }}>
           {label} - {dataExtra.nombreCompleto}
         </p>
@@ -73,8 +73,10 @@ const Dashboard = () => {
   const [sedes, setSedes] = useState([]);
   const [cajas, setCajas] = useState([]);
   const [cargando, setCargando] = useState(true);
+  const [resumenDiario, setResumenDiario] = useState({}); // { 'YYYY-MM-DD': { ingresos, egresos, neto } }
+  const [resumenMensual, setResumenMensual] = useState([]);
 
-  // Nuevo estado para la fecha seleccionada en el calendario
+  // Fecha seleccionada en el calendario
   const [fechaSeleccionada, setFechaSeleccionada] = useState(null);
 
   const COLORS = ['#3B59DA', '#16A34A', '#F59E0B', '#8B5CF6', '#06B6D4', '#EC4899'];
@@ -105,6 +107,28 @@ const Dashboard = () => {
     };
     cargarDatos();
   }, [usuario]);
+
+  // Cargar resúmenes de movimientos por día y mes
+  useEffect(() => {
+    const cargarResumenes = async () => {
+      try {
+        const [diariosRes, mensualRes] = await Promise.all([
+          API.get('/cierres/resumen/diario?dias=31'),
+          API.get('/cierres/resumen/mensual'),
+        ]);
+        // Convertir array a mapa { 'YYYY-MM-DD': { ingresos, egresos } }
+        const mapa = {};
+        diariosRes.data.forEach((d) => { mapa[d.fecha] = d; });
+        setResumenDiario(mapa);
+        setResumenMensual(mensualRes.data);
+      } catch (err) {
+        console.error('Error al cargar resúmenes:', err);
+      }
+    };
+    cargarResumenes();
+    const interval = setInterval(cargarResumenes, 30000); // Actualizar cada 30s
+    return () => clearInterval(interval);
+  }, []);
 
   const getCajasPorSede = (sedeId) => cajas.filter((c) => (c.id_sede?._id || c.id_sede) === sedeId);
   const getSaldoTotalSede = (sedeId) => getCajasPorSede(sedeId).reduce((acc, c) => acc + c.saldo_actual, 0);
@@ -330,7 +354,6 @@ const Dashboard = () => {
 
           {/* --- VISTA CONDICIONAL: CALENDARIO O GRÁFICOS (AL FINAL) --- */}
           {!fechaSeleccionada ? (
-            // AHORA OCUPA TODO EL ANCHO DE LA PANTALLA (se quitó max-w-3xl y mx-auto)
             <div className="card-secundario p-8 mt-8 animate-fadeIn delay-400">
               <div className="text-center mb-6">
                 <h2 className="text-xl font-bold" style={{ color: 'var(--c-primario)' }}>
@@ -349,31 +372,39 @@ const Dashboard = () => {
                 ))}
               </div>
 
-              <div className="grid grid-cols-7 gap-2 sm:gap-4">
+              <div className="grid grid-cols-7 gap-1 sm:gap-2">
                 {diasCalendario.map((fecha, idx) => {
                   if (!fecha) {
-                    // Altura incrementada para adaptarse al ancho completo
-                    return <div key={`empty-${idx}`} className="h-16 sm:h-24 rounded-xl" style={{ background: 'var(--c-fondo)', opacity: 0.5 }}></div>;
+                    return <div key={`empty-${idx}`} className="h-16 sm:h-20 rounded-xl" style={{ background: 'var(--c-fondo)', opacity: 0.3 }}></div>;
                   }
 
                   const esHoy = fecha.getDate() === hoy.getDate() && fecha.getMonth() === hoy.getMonth();
+                  const isoFecha = fecha.toISOString().split('T')[0];
+                  const datos = resumenDiario[isoFecha];
+                  const tieneIngresos = datos?.ingresos > 0;
+                  const tieneEgresos = datos?.egresos > 0;
 
                   return (
                     <button
                       key={idx}
                       onClick={() => setFechaSeleccionada(fecha)}
-                      className="relative h-16 sm:h-24 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 cursor-pointer group hover:scale-105"
+                      className="relative h-16 sm:h-20 rounded-xl flex flex-col items-center justify-center border transition-all duration-200 cursor-pointer group hover:scale-105"
                       style={{
                         background: esHoy ? 'var(--c-accion)' : 'var(--c-fondo-card)',
-                        borderColor: esHoy ? 'var(--c-accion)' : 'var(--c-borde)',
+                        borderColor: esHoy ? 'var(--c-accion)' : datos ? 'rgba(59,89,218,0.2)' : 'var(--c-borde)',
                         color: esHoy ? '#fff' : 'var(--c-texto)'
                       }}
                     >
-                      {/* Tamaño de número incrementado */}
-                      <span className="text-lg sm:text-2xl font-bold">{fecha.getDate()}</span>
-                      {esHoy && <span className="absolute bottom-2 w-1.5 h-1.5 rounded-full bg-white"></span>}
+                      <span className={`font-bold ${esHoy ? 'text-xl' : 'text-base'}`}>{fecha.getDate()}</span>
 
-                      {/* Efecto hover */}
+                      {/* Puntos de actividad */}
+                      {!esHoy && (tieneIngresos || tieneEgresos) && (
+                        <div className="flex gap-1 mt-1">
+                          {tieneIngresos && <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-entrada)' }} />}
+                          {tieneEgresos && <span className="w-1.5 h-1.5 rounded-full" style={{ background: 'var(--c-salida)' }} />}
+                        </div>
+                      )}
+
                       {!esHoy && (
                         <div className="absolute inset-0 rounded-xl opacity-0 group-hover:opacity-100 transition-opacity" style={{ boxShadow: 'inset 0 0 0 2px var(--c-accion)' }}></div>
                       )}
@@ -381,16 +412,45 @@ const Dashboard = () => {
                   );
                 })}
               </div>
+
+              {/* Leyenda */}
+              <div className="flex items-center justify-center gap-6 mt-4 text-xs" style={{ color: 'var(--c-texto-sub)' }}>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: 'var(--c-entrada)' }} />
+                  Ingresos
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: 'var(--c-salida)' }} />
+                  Egresos
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full" style={{ background: 'var(--c-accion)' }} />
+                  Hoy
+                </div>
+              </div>
             </div>
           ) : (
             <div className="mt-8 animate-fadeIn">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-bold flex items-center gap-2" style={{ color: 'var(--c-primario)' }}>
-                  <svg className="w-5 h-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Mostrando datos del: {fechaSeleccionada.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </h2>
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--c-primario)' }}>
+                    {fechaSeleccionada.toLocaleDateString('es-PE', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                  </h2>
+                  {(() => {
+                    const iso = fechaSeleccionada.toISOString().split('T')[0];
+                    const d = resumenDiario[iso];
+                    return d ? (
+                      <div className="flex gap-4 mt-2">
+                        <span className="text-xs font-bold" style={{ color: 'var(--c-entrada)' }}>Ingresos: S/ {d.ingresos.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-xs font-bold" style={{ color: 'var(--c-salida)' }}>Egresos: S/ {d.egresos.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-xs font-bold" style={{ color: d.neto >= 0 ? 'var(--c-entrada)' : 'var(--c-salida)' }}>Neto: S/ {d.neto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</span>
+                        <span className="text-xs" style={{ color: 'var(--c-texto-sub)' }}>{d.movimientos} movimientos</span>
+                      </div>
+                    ) : (
+                      <p className="text-xs mt-1" style={{ color: 'var(--c-texto-sub)' }}>Sin movimientos registrados en este día.</p>
+                    );
+                  })()}
+                </div>
                 <button
                   onClick={() => setFechaSeleccionada(null)}
                   className="btn-primario flex items-center gap-2 text-xs cursor-pointer"
@@ -428,29 +488,61 @@ const Dashboard = () => {
                   </div>
                 </div>
 
-                {/* Gráfico de Barras */}
-                <div className="card-secundario p-6 flex flex-col">
+                {/* --- GRÁFICO DE BARRAS ACTUALIZADO --- */}
+                <div className="card-secundario p-6 flex flex-col h-full">
                   <h3 className="text-sm font-bold uppercase tracking-wider mb-6" style={{ color: 'var(--c-texto-sub)' }}>
                     Capacidad de Cajas (Actual vs Máx)
                   </h3>
-                  <div className="flex-1 min-h-[300px]">
+                  <div className="flex-1 flex flex-col min-h-[350px]">
                     {dataBar.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart data={dataBar} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--c-borde)" opacity={0.4} />
-                          <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--c-texto-sub)' }} dy={10} />
-                          <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: 'var(--c-texto-sub)' }} width={50} />
-                          <Tooltip content={<CustomTooltip />} cursor={{ fill: 'var(--c-borde)', opacity: 0.2 }} />
-                          <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '12px' }} />
-                          <Bar dataKey="Actual" fill="var(--c-accion)" radius={[4, 4, 0, 0]} maxBarSize={40} />
-                          <Bar dataKey="Máximo" fill="var(--c-borde)" radius={[4, 4, 0, 0]} maxBarSize={40} opacity={0.5} />
-                        </BarChart>
-                      </ResponsiveContainer>
+                      <>
+                        <div className="w-full h-full min-h-[300px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={dataBar} margin={{ top: 20, right: 10, left: 0, bottom: 20 }}>
+                              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--c-borde)" opacity={0.3} />
+                              <XAxis 
+                                dataKey="name" 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fontSize: 13, fill: 'var(--c-texto-sub)', fontWeight: '600' }} 
+                                dy={15} 
+                              />
+                              <YAxis 
+                                axisLine={false} 
+                                tickLine={false} 
+                                tick={{ fontSize: 12, fill: 'var(--c-texto-sub)' }} 
+                                width={60}
+                                tickFormatter={(value) => `S/ ${value}`}
+                              />
+                              <Tooltip 
+                                content={<CustomTooltip />} 
+                                cursor={{ fill: 'var(--c-borde)', opacity: 0.15 }} 
+                              />
+                              <Bar 
+                                dataKey="Actual" 
+                                fill="var(--c-accion)" 
+                                radius={[6, 6, 0, 0]} 
+                                maxBarSize={45} 
+                              />
+                              <Bar 
+                                dataKey="Máximo" 
+                                fill="var(--c-borde)" 
+                                radius={[6, 6, 0, 0]} 
+                                maxBarSize={45} 
+                                opacity={0.3} 
+                              />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      </>
                     ) : (
-                      <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--c-texto-sub)' }}>No hay cajas para mostrar.</div>
+                      <div className="h-full flex items-center justify-center text-sm" style={{ color: 'var(--c-texto-sub)' }}>
+                        No hay cajas para mostrar.
+                      </div>
                     )}
                   </div>
                 </div>
+
               </div>
             </div>
           )}

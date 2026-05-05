@@ -122,9 +122,15 @@ const crearMovimiento = async (req, res) => {
 // ── Obtener todos los movimientos ────────────────────────────
 const obtenerMovimientos = async (req, res) => {
   try {
-    const movimientos = await Movimiento.find()
+    let filtro = {};
+    if (req.usuario.rol === 'CAJERO_SEDE') {
+      const cajasSede = await Caja.find({ id_sede: req.usuario.id_sede }).select('_id');
+      filtro = { id_caja: { $in: cajasSede.map(c => c._id) } };
+    }
+
+    const movimientos = await Movimiento.find(filtro)
       .populate('id_caja', 'codigo nombre_caja')
-      .populate('id_usuario', 'login_usuario rol')
+      .populate('id_usuario', 'login_usuario rol nombre')
       .sort({ fecha_hora: -1 });
 
     res.json(movimientos);
