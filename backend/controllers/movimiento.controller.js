@@ -19,9 +19,10 @@ const crearMovimiento = async (req, res) => {
       tipo,
       concepto,
       monto,
-      tiene_recibo,
-      nro_recibo,
-      motivo_sin_recibo,
+      tipo_comprobante,
+      numero_comprobante,
+      ruc,
+      razon_social,
       observaciones,
     } = req.body;
 
@@ -50,27 +51,27 @@ const crearMovimiento = async (req, res) => {
         .json({ mensaje: 'El tipo de movimiento debe ser 0 (Entrada) o 1 (Salida)' });
     }
 
-    // ── 3. Validar limites de saldo ──────────────────────────
-    if (saldo_resultante < caja.saldo_minimo) {
+    // ── 3. Validar limites de saldo (Solo evitar saldo negativo) ──
+    if (saldo_resultante < 0) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
-        mensaje: `Saldo insuficiente. El saldo resultante (${saldo_resultante}) es menor al saldo minimo permitido (${caja.saldo_minimo})`,
+        mensaje: `Operación rechazada. El saldo resultante no puede ser negativo (${saldo_resultante.toFixed(2)})`,
       });
     }
 
-    if (saldo_resultante > caja.saldo_maximo) {
+    if (caja.saldo_maximo > 0 && saldo_resultante > caja.saldo_maximo) {
       await session.abortTransaction();
       session.endSession();
       return res.status(400).json({
-        mensaje: `El saldo resultante (${saldo_resultante}) excede el saldo maximo permitido (${caja.saldo_maximo})`,
+        mensaje: `El saldo resultante (${saldo_resultante.toFixed(2)}) excede el saldo máximo permitido (${caja.saldo_maximo.toFixed(2)})`,
       });
     }
 
-    // ── 4. Determinar estado de sustento ─────────────────────
-    let estado_sustento = 'APROBADO';
-    if (tiene_recibo === false) {
-      estado_sustento = 'PENDIENTE_SUSTENTO';
+    // ── 4. Determinar estado del comprobante ─────────────────
+    let estado_comprobante = 'ASIGNADO';
+    if (!numero_comprobante || numero_comprobante.trim() === '') {
+      estado_comprobante = 'PENDIENTE_ASIGNACION';
     }
 
     // ── 5. Crear el movimiento dentro de la transaccion ──────
@@ -82,10 +83,11 @@ const crearMovimiento = async (req, res) => {
       concepto,
       monto,
       saldo_resultante,
-      tiene_recibo,
-      nro_recibo: tiene_recibo ? nro_recibo : null,
-      motivo_sin_recibo: !tiene_recibo ? motivo_sin_recibo : null,
-      estado_sustento,
+      tipo_comprobante: tipo_comprobante || 'SIN_COMPROBANTE',
+      numero_comprobante: numero_comprobante || null,
+      ruc: ruc || null,
+      razon_social: razon_social || null,
+      estado_comprobante,
       observaciones,
     });
 
@@ -153,8 +155,36 @@ const obtenerMovimientosPorCaja = async (req, res) => {
   }
 };
 
+// ── Actualizar estado de movimiento ──────────────────────────
+const actualizarEstadoMovimiento = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { estado_comprobante, motivo_rechazo, estado_sustento } = req.body;
+
+    const movimiento = await Movimiento.findByIdAndUpdate(
+      id,
+      { 
+        estado_comprobante: estado_comprobante || undefined, 
+        motivo_rechazo: motivo_rechazo || undefined,
+        estado_sustento: estado_sustento || undefined
+      },
+      { new: true }
+    ).populate('id_caja', 'codigo nombre_caja')
+     .populate('id_usuario', 'login_usuario rol');
+
+    if (!movimiento) {
+      return res.status(404).json({ mensaje: 'Movimiento no encontrado' });
+    }
+
+    res.json({ mensaje: 'Estado del movimiento actualizado', movimiento });
+  } catch (error) {
+    res.status(500).json({ mensaje: 'Error al actualizar estado', error: error.message });
+  }
+};
+
 module.exports = {
   crearMovimiento,
   obtenerMovimientos,
   obtenerMovimientosPorCaja,
+  actualizarEstadoMovimiento,
 };

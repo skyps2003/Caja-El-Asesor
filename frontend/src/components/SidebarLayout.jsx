@@ -55,42 +55,41 @@ const SidebarLayout = ({ children }) => {
         {/* Efecto de Luz Superior (Glow) */}
         <div className="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-[var(--c-accion)]/10 to-transparent pointer-events-none"></div>
 
-        {/* Sección de Perfil */}
-        <div className="p-8 pb-6 flex flex-col items-center relative z-10">
-
+        {/* Sección de Perfil - Formal & Premium */}
+        <div className="p-10 pb-8 flex flex-col items-center relative z-10">
           <div
-            className="relative group cursor-pointer mb-4"
+            className="relative group cursor-pointer mb-6"
             onClick={() => setModalPerfilAbierto(true)}
           >
-            {/* Anillo de brillo animado de fondo */}
-            <div className="absolute -inset-1 bg-gradient-to-r from-[var(--c-accion)] to-cyan-400 rounded-full blur opacity-30 group-hover:opacity-70 transition duration-500 animate-pulse-glow"></div>
+            {/* Soft Glow Background */}
+            <div className="absolute -inset-4 bg-[var(--c-accion-pastel)] rounded-full blur-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
 
             {/* Contenedor del Avatar */}
-            <div className="relative w-24 h-24 rounded-full p-1 bg-[var(--c-fondo-card)] border border-[var(--c-borde)] shadow-xl transition-transform duration-500 group-hover:scale-105 group-hover:border-[var(--c-accion)]">
-              <div className="w-full h-full rounded-full overflow-hidden">
+            <div className="relative w-24 h-24 rounded-xl p-0.5 bg-white border border-[var(--c-borde)] shadow-sm transition-all duration-300">
+              <div className="w-full h-full rounded-lg overflow-hidden bg-[var(--c-secundario)]">
                 {usuario?.avatar ? (
-                  <img src={usuario.avatar} alt="Perfil" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  <img src={usuario.avatar} alt="Perfil" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 ) : (
-                  <div className="w-full h-full bg-[var(--c-secundario)] flex items-center justify-center">
-                    <svg className="w-10 h-10 text-[var(--c-texto-sub)]" fill="currentColor" viewBox="0 0 24 24">
+                  <div className="w-full h-full flex items-center justify-center">
+                    <svg className="w-12 h-12 text-[var(--c-accion)] opacity-20" fill="currentColor" viewBox="0 0 24 24">
                       <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" />
                     </svg>
                   </div>
                 )}
               </div>
-              {/* Indicador de estado */}
-              <div className="absolute bottom-0 right-0 w-6 h-6 bg-green-500 border-4 border-[var(--c-fondo-card)] rounded-full shadow-sm"></div>
+              <div className="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-[var(--c-entrada)] border-2 border-white rounded-full"></div>
             </div>
           </div>
 
-          <h2 className="text-[var(--c-texto)] font-bold text-lg tracking-tight text-center truncate w-full transition-colors">
-            {usuario?.nombre || 'Usuario'}
-          </h2>
-
-          <div className="mt-2 px-4 py-1.5 bg-[var(--c-secundario)] rounded-full border border-[var(--c-borde)] shadow-inner">
-            <p className="text-[var(--c-accion)] text-[10px] uppercase tracking-widest font-bold">
-              {usuario?.rol?.replace('_', ' ')}
-            </p>
+          <div className="text-center">
+            <h2 className="text-[var(--c-primario)] font-black text-xl tracking-tight transition-colors">
+              {usuario?.nombre?.split(' ')[0] || 'Usuario'}
+            </h2>
+            <div className="mt-2 px-2 py-0.5 border border-[var(--c-borde)] bg-[var(--c-secundario)] rounded-md">
+              <p className="text-[var(--c-texto-sub)] text-[9px] uppercase tracking-widest font-bold">
+                {usuario?.rol?.replace('_', ' ')}
+              </p>
+            </div>
           </div>
         </div>
 
@@ -157,6 +156,13 @@ const SidebarLayout = ({ children }) => {
                   </NavIcon>
                   Tipos de Caja
                 </NavLink>
+
+                <NavLink to="/admin?tab=movimientos" onClick={() => setSidebarAbierto(false)} className={({ isActive }) => navLinkClasses(isActive && window.location.search.includes('tab=movimientos'))}>
+                  <NavIcon isActive={window.location.search.includes('tab=movimientos')}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+                  </NavIcon>
+                  Aprobación Mov.
+                </NavLink>
               </div>
             </div>
           )}
@@ -164,35 +170,27 @@ const SidebarLayout = ({ children }) => {
 
         {/* Footer */}
         <div className="p-5 border-t border-[var(--c-borde)] bg-[var(--c-fondo-card)] relative z-10">
-          <div className="flex flex-col gap-2">
+          <div className="pt-2 flex gap-2">
             <button
               onClick={toggleTema}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--c-texto-sub)] hover:bg-[var(--c-secundario)] hover:text-[var(--c-texto)] transition-all duration-300 w-full font-semibold text-sm group"
+              title={`Modo ${tema === 'claro' ? 'Oscuro' : 'Claro'}`}
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-[var(--c-borde)] bg-[var(--c-secundario)] text-[var(--c-texto-sub)] hover:text-[var(--c-primario)] hover:border-[var(--c-primario)]/30 transition-all text-[10px] font-black uppercase tracking-wider"
             >
-              <div className="p-1.5 rounded-md bg-[var(--c-fondo)] shadow-sm border border-[var(--c-borde)] group-hover:border-[var(--c-accion)]/50 transition-colors">
-                {tema === 'claro' ? (
-                  <svg className="w-4 h-4 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-                  </svg>
-                ) : (
-                  <svg className="w-4 h-4 text-[var(--c-accion)]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                  </svg>
-                )}
-              </div>
-              Modo {tema === 'claro' ? 'Oscuro' : 'Claro'}
+              {tema === 'claro' ? (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
+              ) : (
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
+              )}
+              <span className="hidden lg:inline">{tema === 'claro' ? 'Oscuro' : 'Claro'}</span>
             </button>
 
             <button
               onClick={handleCerrarSesion}
-              className="flex items-center gap-3 px-4 py-3 rounded-xl text-[var(--c-salida)] hover:bg-[var(--c-salida)]/10 transition-all duration-300 w-full font-semibold text-sm group"
+              title="Cerrar Sesión"
+              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-red-500/20 bg-red-500/5 text-red-600 hover:bg-red-500 hover:text-white hover:border-red-500 transition-all text-[10px] font-black uppercase tracking-wider group"
             >
-              <div className="p-1.5 rounded-md bg-[var(--c-salida)]/10 group-hover:bg-[var(--c-salida)] transition-colors group-hover:text-white">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </div>
-              Cerrar Sesión
+              <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>
+              <span className="hidden lg:inline">Salir</span>
             </button>
           </div>
         </div>
@@ -214,9 +212,9 @@ const SidebarLayout = ({ children }) => {
 
 /* Funciones auxiliares para simplificar el código del NavLink */
 const navLinkClasses = (isActive) =>
-  `group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-sm font-semibold border ${isActive
-    ? 'bg-gradient-to-r from-[var(--c-accion)]/10 to-transparent text-[var(--c-accion)] border-[var(--c-accion)]/20 shadow-[inset_4px_0_0_var(--c-accion)]'
-    : 'border-transparent text-[var(--c-texto-sub)] hover:bg-[var(--c-secundario)] hover:text-[var(--c-texto)]'
+  `group flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all duration-200 text-xs font-bold ${isActive
+    ? 'bg-[var(--c-secundario)] text-[var(--c-primario)] border border-[var(--c-borde)]'
+    : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)] hover:bg-[var(--c-secundario)]/40'
   }`;
 
 const NavIcon = ({ isActive, children }) => (

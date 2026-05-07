@@ -28,22 +28,39 @@ const MovimientoSchema = new mongoose.Schema(
     monto: {
       type: Number,
       required: [true, 'El monto es obligatorio'],
-      min: [0.01, 'El monto debe ser mayor a cero'],
+      min: [1, 'El monto debe ser al menos 1 sol'],
     },
     saldo_resultante: {
       type: Number,
       required: true,
     },
-    tiene_recibo: {
-      type: Boolean,
-      default: true,
+    tipo_comprobante: {
+      type: String,
+      enum: ['FACTURA', 'RECIBO', 'SIN_COMPROBANTE'],
+      default: 'SIN_COMPROBANTE',
     },
-    nro_recibo: {
+    numero_comprobante: {
       type: String,
       trim: true,
       default: null,
     },
-    motivo_sin_recibo: {
+    // Nuevos campos para Factura
+    ruc: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    razon_social: {
+      type: String,
+      trim: true,
+      default: null,
+    },
+    estado_comprobante: {
+      type: String,
+      enum: ['ASIGNADO', 'PENDIENTE_ASIGNACION', 'RECHAZADO'],
+      default: 'ASIGNADO',
+    },
+    motivo_rechazo: {
       type: String,
       trim: true,
       default: null,

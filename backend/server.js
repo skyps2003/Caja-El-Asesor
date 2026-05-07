@@ -20,6 +20,9 @@ app.use('/api/sedes', require('./routes/sede.routes'));
 app.use('/api/usuarios', require('./routes/usuario.routes'));
 app.use('/api/cajas', require('./routes/caja.routes'));
 app.use('/api/movimientos', require('./routes/movimiento.routes'));
+app.use('/api/comprobantes', require('./routes/comprobante.routes'));
+app.use('/api/periodos', require('./routes/periodo.routes'));
+app.use('/api/reportes', require('./routes/reporte.routes'));
 app.use('/api/cierres', require('./routes/cierresRoutes'));
 app.use('/api/auth', require('./routes/auth.routes'));
 

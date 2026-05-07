@@ -170,14 +170,32 @@ exports.movimientosPeriodo = async (req, res) => {
 
     let fechaDesde, fechaHasta;
     if (tipo === 'DIARIO') {
-      const d = fecha ? new Date(fecha) : new Date();
-      fechaDesde = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0);
-      fechaHasta = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59);
+      let año, mes, dia;
+      if (fecha) {
+        const parts = fecha.split('-');
+        año = parseInt(parts[0]);
+        mes = parseInt(parts[1]) - 1;
+        dia = parseInt(parts[2]);
+      } else {
+        const hoy = new Date();
+        año = hoy.getFullYear();
+        mes = hoy.getMonth();
+        dia = hoy.getDate();
+      }
+      fechaDesde = new Date(año, mes, dia, 0, 0, 0);
+      fechaHasta = new Date(año, mes, dia, 23, 59, 59);
     } else {
       // MENSUAL
-      const parts = fecha ? fecha.split('-') : [new Date().getFullYear(), new Date().getMonth() + 1];
-      const año = parseInt(parts[0]);
-      const mes = parseInt(parts[1]) - 1;
+      let año, mes;
+      if (fecha) {
+        const parts = fecha.split('-');
+        año = parseInt(parts[0]);
+        mes = parseInt(parts[1]) - 1;
+      } else {
+        const hoy = new Date();
+        año = hoy.getFullYear();
+        mes = hoy.getMonth();
+      }
       fechaDesde = new Date(año, mes, 1, 0, 0, 0);
       fechaHasta = new Date(año, mes + 1, 0, 23, 59, 59);
     }

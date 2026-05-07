@@ -51,10 +51,22 @@ const obtenerUsuarioPorId = async (req, res) => {
 
 const actualizarUsuario = async (req, res) => {
   try {
-    const { password, ...resto } = req.body;
+    const { password, passwordAntiguo, ...resto } = req.body;
     let datosActualizar = { ...resto };
 
     if (password) {
+      if (!passwordAntiguo) {
+        return res.status(400).json({ mensaje: 'Debe proporcionar la contraseña actual para cambiarla' });
+      }
+
+      const usuarioDb = await Usuario.findById(req.params.id);
+      if (!usuarioDb) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+
+      const esValida = await bcrypt.compare(passwordAntiguo, usuarioDb.password);
+      if (!esValida) {
+        return res.status(400).json({ mensaje: 'La contraseña actual es incorrecta' });
+      }
+
       const salt = await bcrypt.genSalt(10);
       datosActualizar.password = await bcrypt.hash(password, salt);
     }

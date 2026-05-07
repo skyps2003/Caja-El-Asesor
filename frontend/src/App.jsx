@@ -7,6 +7,7 @@ import Dashboard from './pages/Dashboard';
 import Movimientos from './pages/Movimientos';
 import AdminDashboard from './pages/AdminDashboard';
 import Cierres from './pages/Cierres';
+import ComprobantesPage from './pages/ComprobantesPage';
 
 function App() {
   return (
@@ -47,6 +48,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/comprobantes"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN_SISTEMA', 'ADMIN_SEDE']}>
+                  <ComprobantesPage />
                 </ProtectedRoute>
               }
             />

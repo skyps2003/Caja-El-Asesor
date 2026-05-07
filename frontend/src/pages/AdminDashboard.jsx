@@ -3,6 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
 import Loader from '../components/Loader';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 
 // Icons
 const UsersIcon = () => (
@@ -30,6 +31,21 @@ const DeleteIcon = () => (
     <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
   </svg>
 );
+const MovimientoIcon = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8} className="w-5 h-5">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5" />
+  </svg>
+);
+const CheckIcon = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+  </svg>
+);
+const XIcon = () => (
+  <svg fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5} className="w-4 h-4">
+    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+  </svg>
+);
 
 const AdminDashboard = () => {
   const { usuario } = useAuth();
@@ -49,20 +65,24 @@ const AdminDashboard = () => {
   const [sedes, setSedes] = useState([]);
   const [cajas, setCajas] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
+  const [movimientos, setMovimientos] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [filtroMovimientos, setFiltroMovimientos] = useState('PENDIENTE'); // 'TODOS', 'PENDIENTE'
 
   const cargarDatos = async () => {
     try {
       setCargando(true);
-      const [sedesRes, cajasRes, usuariosRes] = await Promise.all([
+      const [sedesRes, cajasRes, usuariosRes, movRes] = await Promise.all([
         API.get('/sedes'),
         API.get('/cajas'),
-        API.get('/usuarios')
+        API.get('/usuarios'),
+        API.get('/movimientos')
       ]);
       setSedes(sedesRes.data);
       setCajas(cajasRes.data);
       setUsuarios(usuariosRes.data);
+      setMovimientos(movRes.data);
     } catch (error) {
       console.error('Error al cargar datos', error);
     } finally {
@@ -92,7 +112,7 @@ const AdminDashboard = () => {
       else setFormData({ ...entity });
     } else {
       if (type === 'usuario') setFormData({ nombre: '', login_usuario: '', password: '', rol: 'CAJERO_SEDE', id_sede: sedes[0]?._id || '' });
-      else if (type === 'caja') setFormData({ codigo: '', nombre_caja: '', saldo_minimo: 0, saldo_maximo: 0, id_sede: sedes[0]?._id || '' });
+      else if (type === 'caja') setFormData({ codigo: '', nombre_caja: '', saldo_minimo: 0, saldo_maximo: 0, color_primario: '#16A34A', color_secundario: '#15803D', id_sede: sedes[0]?._id || '' });
       else if (type === 'sede') setFormData({ nombre: '', direccion: '', estado: true });
     }
     setModalOpen(true);
@@ -128,6 +148,29 @@ const AdminDashboard = () => {
     }
   };
 
+  const handleAprobarMovimiento = async (id) => {
+    try {
+      await API.put(`/movimientos/${id}/estado`, { estado_comprobante: 'ASIGNADO', estado_sustento: 'APROBADO' });
+      await cargarDatos();
+    } catch (error) {
+      console.error('Error al aprobar movimiento', error);
+      alert('Error al aprobar movimiento');
+    }
+  };
+
+  const handleRechazarMovimiento = async (id) => {
+    const motivo = window.prompt('Ingrese el motivo del rechazo:');
+    if (motivo) {
+      try {
+        await API.put(`/movimientos/${id}/estado`, { estado_comprobante: 'RECHAZADO', motivo_rechazo: motivo });
+        await cargarDatos();
+      } catch (error) {
+        console.error('Error al rechazar movimiento', error);
+        alert('Error al rechazar movimiento');
+      }
+    }
+  };
+
   const handleDelete = async (type, id) => {
     if (window.confirm(`¿Estás seguro de eliminar este ${type}?`)) {
       try {
@@ -147,100 +190,214 @@ const AdminDashboard = () => {
       <main className="min-h-screen p-8" style={{ background: 'var(--c-fondo)' }}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           
-          <div className="mb-8 animate-fadeIn">
-            <h1 className="text-2xl font-bold" style={{ color: 'var(--c-primario)' }}>Gestión Administrativa</h1>
-            <p className="text-sm mt-1" style={{ color: 'var(--c-texto-sub)' }}>Administra usuarios, sedes y cajas del sistema.</p>
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 animate-fadeIn">
+            <div className="space-y-1">
+              <h1 className="text-4xl font-heading font-bold text-[var(--c-primario)]">Gestión Administrativa</h1>
+              <p className="text-[var(--c-texto-sub)] font-medium flex items-center gap-2">
+                <span className="w-1.5 h-1.5 bg-[var(--c-accion)] rounded-full"></span>
+                Control de Infraestructura y Usuarios
+              </p>
+            </div>
           </div>
 
-          <div className="flex gap-4 mb-6 overflow-x-auto pb-2 animate-fadeIn delay-100 hidden">
-            <button
-              onClick={() => cambiarTab('usuarios')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${tabActiva === 'usuarios' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              style={tabActiva === 'usuarios' ? { background: 'var(--c-accion)' } : { background: 'var(--c-fondo-card)', color: 'var(--c-texto)' }}
-            >
-              <UsersIcon /> Usuarios
-            </button>
-            <button
-              onClick={() => cambiarTab('sedes')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${tabActiva === 'sedes' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              style={tabActiva === 'sedes' ? { background: 'var(--c-accion)' } : { background: 'var(--c-fondo-card)', color: 'var(--c-texto)' }}
-            >
-              <SedeIcon /> Sedes
-            </button>
-            <button
-              onClick={() => cambiarTab('cajas')}
-              className={`flex items-center gap-2 px-6 py-3 rounded-xl font-medium transition-all ${tabActiva === 'cajas' ? 'bg-blue-600 text-white shadow-lg' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
-              style={tabActiva === 'cajas' ? { background: 'var(--c-accion)' } : { background: 'var(--c-fondo-card)', color: 'var(--c-texto)' }}
-            >
-              <CajaIcon /> Cajas
-            </button>
+          {/* Capital Distribution Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10 animate-fadeIn delay-100">
+            <div className="lg:col-span-12">
+              <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 w-full h-[300px]">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[var(--c-primario)] mb-6 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-[var(--c-accion)] rounded-full"></span>
+                    Distribución de Capital
+                  </h3>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={cajas.map(c => {
+                          let color = c.color_primario;
+                          const n = c.nombre_caja.toLowerCase();
+                          if (n.includes('efectivo')) color = '#22C55E';
+                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
+                          else if (n.includes('interbank')) color = '#FACC15';
+                          else if (n.includes('nacion')) color = '#DC2626';
+                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
+                          return { name: c.nombre_caja, value: c.saldo_actual, color };
+                        })}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        animationBegin={200}
+                        animationDuration={1500}
+                        stroke="none"
+                      >
+                        {cajas.map((c, index) => {
+                          let color = c.color_primario;
+                          const n = c.nombre_caja.toLowerCase();
+                          if (n.includes('efectivo')) color = '#22C55E';
+                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
+                          else if (n.includes('interbank')) color = '#FACC15';
+                          else if (n.includes('nacion')) color = '#DC2626';
+                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'var(--c-fondo-card)', 
+                          borderRadius: '16px', 
+                          border: '1px solid var(--c-borde)',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          textTransform: 'uppercase'
+                        }} 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6 shrink-0 pr-10 max-h-[300px] overflow-y-auto custom-scrollbar">
+                   {cajas.map((c, i) => (
+                     <div key={i} className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color_primario }}></div>
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-wider text-[var(--c-texto-sub)] flex items-center gap-2">
+                            {c.nombre_caja}
+                            <span className="text-[7px] bg-[var(--c-secundario)] px-1 rounded border border-[var(--c-borde)]">{c.id_sede?.nombre || 'Sede Local'}</span>
+                          </p>
+                          <p className="text-sm font-black text-[var(--c-primario)]">S/ {c.saldo_actual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              </div>
+            </div>
           </div>
 
-          <div className="card p-6 animate-slideLeft delay-200">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold" style={{ color: 'var(--c-primario)' }}>
-                {tabActiva === 'usuarios' && 'Lista de Usuarios'}
-                {tabActiva === 'sedes' && 'Lista de Sedes'}
-                {tabActiva === 'cajas' && 'Lista de Cajas'}
-              </h2>
-              <div className="flex gap-4 items-center">
-                <input
-                  type="text"
-                  placeholder="Buscar..."
-                  className="input-field !h-10 !w-64 !text-sm"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-                <button onClick={() => handleOpenModal(tabActiva.slice(0, -1))} className="btn-primario">
-                  + Crear Nuevo
-                </button>
+          {/* Navigation Tabs - Segmented Control Style */}
+          <div className="flex bg-[var(--c-secundario)] p-1.5 rounded-2xl border border-[var(--c-borde)] mb-10 w-fit backdrop-blur-md">
+            {[
+              { id: 'usuarios', icon: <UsersIcon />, label: 'Usuarios' },
+              { id: 'sedes', icon: <SedeIcon />, label: 'Sedes' },
+              { id: 'cajas', icon: <CajaIcon />, label: 'Cajas' },
+              { id: 'movimientos', icon: <MovimientoIcon />, label: 'Aprobaciones' }
+            ].map(tab => (
+              <button
+                key={tab.id}
+                onClick={() => cambiarTab(tab.id)}
+                className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
+                  tabActiva === tab.id 
+                    ? 'bg-[var(--c-fondo-card)] shadow-lg shadow-black/5 text-[var(--c-primario)] border border-[var(--c-borde)]' 
+                    : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)] hover:bg-black/5'
+                }`}
+              >
+                <span className={tabActiva === tab.id ? 'text-[var(--c-accion)]' : 'opacity-50'}>{tab.icon}</span>
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm animate-slideLeft delay-200">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between mb-8 gap-6">
+              <div className="flex items-center gap-3">
+                <div className="w-1.5 h-6 bg-[var(--c-accion)] rounded-full"></div>
+                <h2 className="text-sm font-black uppercase tracking-widest text-[var(--c-primario)]">
+                  {tabActiva === 'usuarios' && 'Directorio de Personal'}
+                  {tabActiva === 'sedes' && 'Infraestructura de Sedes'}
+                  {tabActiva === 'cajas' && 'Configuración de Cajas'}
+                  {tabActiva === 'movimientos' && 'Auditoría de Movimientos'}
+                </h2>
+              </div>
+              
+              <div className="flex flex-wrap gap-4 items-center">
+                {tabActiva === 'movimientos' && (
+                  <div className="flex bg-[var(--c-secundario)] p-1 rounded-xl border border-[var(--c-borde)]">
+                    <button 
+                      onClick={() => setFiltroMovimientos('PENDIENTE')}
+                      className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${filtroMovimientos === 'PENDIENTE' ? 'bg-[var(--c-fondo-card)] shadow-sm text-[var(--c-primario)]' : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)]'}`}
+                    >PENDIENTES</button>
+                    <button 
+                      onClick={() => setFiltroMovimientos('TODOS')}
+                      className={`px-4 py-1.5 text-[10px] font-black rounded-lg transition-all ${filtroMovimientos === 'TODOS' ? 'bg-[var(--c-fondo-card)] shadow-sm text-[var(--c-primario)]' : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)]'}`}
+                    >TODOS</button>
+                  </div>
+                )}
+                
+                <div className="relative">
+                  <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-texto-sub)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                  <input
+                    type="text"
+                    placeholder="Filtrar registros..."
+                    className="premium-input !pl-10 !py-2.5 !text-xs !w-64 !bg-[var(--c-secundario)]"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+
+                {tabActiva !== 'movimientos' && (
+                  <button onClick={() => handleOpenModal(tabActiva.slice(0, -1))} className="btn-gold !py-2.5 !px-6 !text-xs shadow-xl">
+                    <span className="text-lg mr-2 leading-none">+</span>
+                    CREAR NUEVO
+                  </button>
+                )}
               </div>
             </div>
 
-            <div className="table-wrapper">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead className="table-header">
-                    <tr>
-                      {tabActiva === 'usuarios' && (
-                        <>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Nombre</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Login</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Rol</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Sede</th>
-                        </>
-                      )}
-                      {tabActiva === 'sedes' && (
-                        <>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Nombre</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Dirección</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Estado</th>
-                        </>
-                      )}
-                      {tabActiva === 'cajas' && (
-                        <>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Código</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Nombre</th>
-                          <th className="text-left py-3 px-4 font-medium opacity-80">Sede</th>
-                          <th className="text-right py-3 px-4 font-medium opacity-80">Min/Max</th>
-                        </>
-                      )}
-                      <th className="text-center py-3 px-4 font-medium opacity-80">Acciones</th>
-                    </tr>
-                  </thead>
+            <div className="overflow-x-auto pb-4">
+              <table className="premium-table">
+                <thead>
+                  <tr>
+                    {tabActiva === 'usuarios' && (
+                      <>
+                        <th>Nombre del Usuario</th>
+                        <th>Login ID</th>
+                        <th>Rol</th>
+                        <th>Sede Asignada</th>
+                      </>
+                    )}
+                    {tabActiva === 'sedes' && (
+                      <>
+                        <th>Nombre Sede</th>
+                        <th>Ubicación / Dirección</th>
+                        <th>Estado Operativo</th>
+                      </>
+                    )}
+                    {tabActiva === 'cajas' && (
+                      <>
+                        <th>Cód.</th>
+                        <th>Denominación</th>
+                        <th>Sede</th>
+                        <th className="text-right">Límites (Min/Max)</th>
+                      </>
+                    )}
+                    {tabActiva === 'movimientos' && (
+                      <>
+                        <th>Fecha / Hora</th>
+                        <th>Caja</th>
+                        <th>Tipo</th>
+                        <th>Concepto</th>
+                        <th>Monto</th>
+                        <th className="text-right">Saldo Final</th>
+                        <th>Comprobante</th>
+                        <th>Estado</th>
+                      </>
+                    )}
+                    <th className="text-center">Acciones</th>
+                  </tr>
+                </thead>
                   <tbody>
                     {tabActiva === 'usuarios' && usuarios.filter(u => 
                       u.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
                       u.login_usuario.toLowerCase().includes(searchTerm.toLowerCase())
                     ).map(u => (
-                      <tr key={u._id} className="table-row">
-                        <td className="py-3 px-4 font-medium">{u.nombre}</td>
-                        <td className="py-3 px-4 text-xs font-mono">{u.login_usuario}</td>
-                        <td className="py-3 px-4"><span className="badge badge-aprobado">{u.rol}</span></td>
-                        <td className="py-3 px-4">{u.id_sede?.nombre}</td>
-                        <td className="py-3 px-4 flex justify-center gap-2">
-                          <button onClick={() => handleOpenModal('usuario', u)} className="p-1.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"><EditIcon /></button>
-                          <button onClick={() => handleDelete('usuario', u._id)} className="p-1.5 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors"><DeleteIcon /></button>
+                      <tr key={u._id}>
+                        <td className="font-bold text-[var(--c-primario)]">{u.nombre}</td>
+                        <td className="text-[11px] font-mono opacity-70">{u.login_usuario}</td>
+                        <td><span className="badge badge-warning">{u.rol}</span></td>
+                        <td className="text-xs font-medium">{u.id_sede?.nombre}</td>
+                        <td className="flex justify-center gap-3">
+                          <button onClick={() => handleOpenModal('usuario', u)} className="p-2 rounded-xl bg-[var(--c-accion-pastel)] text-[var(--c-accion)] hover:scale-110 transition-all"><EditIcon /></button>
+                          <button onClick={() => handleDelete('usuario', u._id)} className="p-2 rounded-xl bg-[var(--c-danger-pastel)] text-[var(--c-salida)] hover:scale-110 transition-all"><DeleteIcon /></button>
                         </td>
                       </tr>
                     ))}
@@ -248,13 +405,13 @@ const AdminDashboard = () => {
                       s.nombre.toLowerCase().includes(searchTerm.toLowerCase()) || 
                       s.direccion.toLowerCase().includes(searchTerm.toLowerCase())
                     ).map(s => (
-                      <tr key={s._id} className="table-row">
-                        <td className="py-3 px-4 font-medium">{s.nombre}</td>
-                        <td className="py-3 px-4">{s.direccion}</td>
-                        <td className="py-3 px-4"><span className={`badge ${s.estado ? 'badge-entrada' : 'badge-salida'}`}>{s.estado ? 'Activo' : 'Inactivo'}</span></td>
-                        <td className="py-3 px-4 flex justify-center gap-2">
-                          <button onClick={() => handleOpenModal('sede', s)} className="p-1.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"><EditIcon /></button>
-                          <button onClick={() => handleDelete('sede', s._id)} className="p-1.5 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors"><DeleteIcon /></button>
+                      <tr key={s._id}>
+                        <td className="font-bold text-[var(--c-primario)]">{s.nombre}</td>
+                        <td className="text-xs opacity-70">{s.direccion}</td>
+                        <td><span className={`badge ${s.estado ? 'badge-success' : 'badge-danger'}`}>{s.estado ? 'Activo' : 'Inactivo'}</span></td>
+                        <td className="flex justify-center gap-3">
+                          <button onClick={() => handleOpenModal('sede', s)} className="p-2 rounded-xl bg-[var(--c-accion-pastel)] text-[var(--c-accion)] hover:scale-110 transition-all"><EditIcon /></button>
+                          <button onClick={() => handleDelete('sede', s._id)} className="p-2 rounded-xl bg-[var(--c-danger-pastel)] text-[var(--c-salida)] hover:scale-110 transition-all"><DeleteIcon /></button>
                         </td>
                       </tr>
                     ))}
@@ -262,85 +419,198 @@ const AdminDashboard = () => {
                       c.nombre_caja.toLowerCase().includes(searchTerm.toLowerCase()) || 
                       c.codigo.toLowerCase().includes(searchTerm.toLowerCase())
                     ).map(c => (
-                      <tr key={c._id} className="table-row">
-                        <td className="py-3 px-4 font-mono font-bold text-xs" style={{ color: 'var(--c-accion)' }}>{c.codigo}</td>
-                        <td className="py-3 px-4 font-medium">{c.nombre_caja}</td>
-                        <td className="py-3 px-4">{c.id_sede?.nombre}</td>
-                        <td className="py-3 px-4 text-right text-xs">S/ {c.saldo_minimo} - S/ {c.saldo_maximo}</td>
-                        <td className="py-3 px-4 flex justify-center gap-2">
-                          <button onClick={() => handleOpenModal('caja', c)} className="p-1.5 rounded bg-blue-100 text-blue-600 hover:bg-blue-200 transition-colors"><EditIcon /></button>
-                          <button onClick={() => handleDelete('caja', c._id)} className="p-1.5 rounded bg-red-100 text-red-600 hover:bg-red-200 transition-colors"><DeleteIcon /></button>
+                      <tr key={c._id}>
+                        <td className="flex items-center gap-3">
+                          <div 
+                            className="w-3 h-3 rounded-full shadow-sm" 
+                            style={{ background: `linear-gradient(135deg, ${c.color_primario}, ${c.color_secundario})` }}
+                          ></div>
+                          <span className="font-black text-[var(--c-accion)] text-[10px] tracking-widest">{c.codigo}</span>
+                        </td>
+                        <td className="font-bold text-[var(--c-primario)]">{c.nombre_caja}</td>
+                        <td className="text-xs font-medium">{c.id_sede?.nombre}</td>
+                        <td className="text-right text-[11px] font-black opacity-60">S/ {c.saldo_minimo} - S/ {c.saldo_maximo}</td>
+                        <td className="flex justify-center gap-3">
+                          <button onClick={() => handleOpenModal('caja', c)} className="p-2 rounded-xl bg-[var(--c-accion-pastel)] text-[var(--c-accion)] hover:scale-110 transition-all"><EditIcon /></button>
+                          <button onClick={() => handleDelete('caja', c._id)} className="p-2 rounded-xl bg-[var(--c-danger-pastel)] text-[var(--c-salida)] hover:scale-110 transition-all"><DeleteIcon /></button>
                         </td>
                       </tr>
                     ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
+                    {tabActiva === 'movimientos' && movimientos.filter(m => {
+                      const matchSearch = m.concepto.toLowerCase().includes(searchTerm.toLowerCase()) || m.id_caja?.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchFiltro = filtroMovimientos === 'TODOS' ? true : m.estado_comprobante === 'PENDIENTE_ASIGNACION';
+                      return matchSearch && matchFiltro;
+                    }).map(m => (
+                      <tr key={m._id}>
+                        <td className="text-[10px] font-bold opacity-60 uppercase">{new Date(m.fecha_hora).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}</td>
+                        <td className="font-black text-[var(--c-accion)] text-[10px] tracking-widest">{m.id_caja?.codigo}</td>
+                        <td>
+                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${!m.tipo ? 'bg-[var(--c-success-pastel)] text-green-700' : 'bg-[var(--c-danger-pastel)] text-red-700'}`}>
+                            {!m.tipo ? 'Ingreso' : 'Egreso'}
+                          </span>
+                        </td>
+                        <td className="text-xs font-medium max-w-[200px] truncate" title={m.concepto}>{m.concepto}</td>
+                        <td className={`font-black text-xs ${m.tipo ? 'text-[var(--c-salida)]' : 'text-[var(--c-entrada)]'}`}>
+                          {m.tipo ? '-' : '+'}S/ {m.monto.toLocaleString('es-PE', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td className="text-right text-[11px] font-black opacity-60">S/ {m.saldo_resultante?.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</td>
+                        <td>
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-[9px] font-black text-[var(--c-primario)] opacity-50">{m.tipo_comprobante || 'S/C'}</span>
+                            <span className="text-[10px] font-mono font-bold text-[var(--c-accion)]">{m.numero_comprobante || '—'}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <span className={`badge ${m.estado_comprobante === 'ASIGNADO' ? 'badge-success' : m.estado_comprobante === 'RECHAZADO' ? 'badge-danger' : 'badge-warning'}`}>
+                            {m.estado_comprobante === 'PENDIENTE_ASIGNACION' ? 'Pendiente' : m.estado_comprobante}
+                          </span>
+                        </td>
+                        <td className="flex justify-center gap-3">
+                          {m.estado_comprobante === 'PENDIENTE_ASIGNACION' && (
+                            <>
+                              <button onClick={() => handleAprobarMovimiento(m._id)} title="Aprobar" className="p-2 rounded-xl bg-[var(--c-success-pastel)] text-green-600 hover:scale-110 transition-all"><CheckIcon /></button>
+                              <button onClick={() => handleRechazarMovimiento(m._id)} title="Rechazar" className="p-2 rounded-xl bg-[var(--c-danger-pastel)] text-[var(--c-salida)] hover:scale-110 transition-all"><XIcon /></button>
+                            </>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+              </tbody>
+            </table>
           </div>
         </div>
+      </div>
 
-        {modalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-            <div className="card w-full max-w-md p-6 relative animate-scaleIn">
-              <button onClick={handleCloseModal} className="absolute top-4 right-4 text-gray-500 hover:text-gray-800">
-                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-              <h3 className="text-xl font-bold mb-6" style={{ color: 'var(--c-primario)' }}>
-                {isEditing ? 'Editar' : 'Nuevo'} {modalType.charAt(0).toUpperCase() + modalType.slice(1)}
-              </h3>
-              
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {modalType === 'usuario' && (
-                  <>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Nombre</label><input required className="input-field" name="nombre" value={formData.nombre || ''} onChange={handleChange} /></div>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Login (Usuario)</label><input required className="input-field" name="login_usuario" value={formData.login_usuario || ''} onChange={handleChange} /></div>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Contraseña {isEditing && '(Opcional)'}</label><input required={!isEditing} type="password" className="input-field" name="password" value={formData.password || ''} onChange={handleChange} /></div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Rol</label>
-                      <select required className="input-field" name="rol" value={formData.rol || 'CAJERO_SEDE'} onChange={handleChange}>
-                        <option value="CAJERO_SEDE">Cajero Sede</option>
-                        <option value="ADMINISTRADOR">Administrador</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Sede Asignada</label>
-                      <select required className="input-field" name="id_sede" value={formData.id_sede || ''} onChange={handleChange}>
-                        <option value="" disabled>Seleccione sede...</option>
-                        {sedes.map(s => <option key={s._id} value={s._id}>{s.nombre}</option>)}
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                {modalType === 'sede' && (
-                  <>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Nombre</label><input required className="input-field" name="nombre" value={formData.nombre || ''} onChange={handleChange} /></div>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Dirección</label><input required className="input-field" name="direccion" value={formData.direccion || ''} onChange={handleChange} /></div>
-                    <div className="flex items-center gap-2 mt-2">
-                      <input type="checkbox" name="estado" checked={formData.estado ?? true} onChange={handleChange} className="w-4 h-4 text-blue-600 rounded border-gray-300" />
-                      <label className="text-sm font-medium" style={{ color: 'var(--c-texto)' }}>Sede Activa</label>
-                    </div>
-                  </>
-                )}
-
-                {modalType === 'caja' && (
-                  <>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Código</label><input required className="input-field" name="codigo" value={formData.codigo || ''} onChange={handleChange} /></div>
-                    <div><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Nombre / Tipo de Caja</label><input required className="input-field" name="nombre_caja" value={formData.nombre_caja || ''} onChange={handleChange} /></div>
-                    <div className="flex gap-4">
-                      <div className="w-1/2"><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Saldo Mínimo Sugerido</label><input required type="number" className="input-field" name="saldo_minimo" value={formData.saldo_minimo || 0} onChange={handleChange} /></div>
-                      <div className="w-1/2"><label className="block text-xs font-semibold mb-1" style={{ color: 'var(--c-texto-sub)' }}>Saldo Máximo Permitido</label><input required type="number" className="input-field" name="saldo_maximo" value={formData.saldo_maximo || 0} onChange={handleChange} /></div>
-                    </div>
-                    <p className="text-[10px] text-blue-500 font-bold mt-2 italic">* Este tipo de caja se habilitará automáticamente en todas las sedes.</p>
-                  </>
-                )}
-
-                <div className="flex justify-end gap-3 mt-6 pt-4 border-t" style={{ borderColor: 'var(--c-borde)' }}>
-                  <button type="button" onClick={handleCloseModal} className="px-4 py-2 text-sm font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Cancelar</button>
-                  <button type="submit" className="btn-primario">Guardar</button>
+      {modalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-[var(--c-primario)]/20 backdrop-blur-md animate-fadeIn">
+            <div className="bg-[var(--c-fondo-card)] rounded-3xl w-full max-w-xl shadow-2xl overflow-hidden animate-scaleIn border border-[var(--c-borde)]">
+              <div className="relative px-8 py-10">
+                <button onClick={handleCloseModal} className="absolute top-6 right-6 p-2 rounded-full hover:bg-[var(--c-secundario)] transition-colors text-[var(--c-texto-sub)]">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+                
+                <div className="mb-8">
+                  <span className="text-[var(--c-accion)] text-[10px] font-bold uppercase tracking-widest px-3 py-1 bg-[var(--c-accion-pastel)] rounded-full mb-3 inline-block">Formulario de Gestión</span>
+                  <h3 className="text-3xl font-heading font-bold text-[var(--c-primario)]">
+                    {isEditing ? 'Actualizar' : 'Registrar'} {modalType === 'usuario' ? 'Usuario' : modalType === 'sede' ? 'Sede' : 'Tipo de Caja'}
+                  </h3>
+                  <p className="text-[var(--c-texto-sub)] text-sm mt-1">Complete los campos detallados a continuación para {isEditing ? 'modificar los datos existentes' : 'crear un nuevo registro en el sistema'}.</p>
                 </div>
-              </form>
+                
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {modalType === 'usuario' && (
+                    <div className="grid grid-cols-2 gap-6">
+                      <div className="col-span-2">
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Nombre Completo</label>
+                        <input required className="premium-input" name="nombre" value={formData.nombre || ''} onChange={handleChange} placeholder="Ej: Juan Pérez" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Nombre de Usuario</label>
+                        <input required className="premium-input" name="login_usuario" value={formData.login_usuario || ''} onChange={handleChange} placeholder="jperez" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Contraseña {isEditing && '(Opcional)'}</label>
+                        <input required={!isEditing} type="password" className="premium-input" name="password" value={formData.password || ''} onChange={handleChange} placeholder="••••••••" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Nivel de Acceso</label>
+                        <select required className="premium-input" name="rol" value={formData.rol || 'CAJERO_SEDE'} onChange={handleChange}>
+                          <option value="CAJERO_SEDE">Cajero de Sede</option>
+                          <option value="ADMINISTRADOR">Administrador Maestro</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Sede de Operación</label>
+                        <select required className="premium-input" name="id_sede" value={formData.id_sede || ''} onChange={handleChange}>
+                          <option value="" disabled>Vincular a sede...</option>
+                          {sedes.map(s => <option key={s._id} value={s._id}>{s.nombre}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalType === 'sede' && (
+                    <div className="space-y-5">
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Nombre de la Sede</label>
+                        <input required className="premium-input" name="nombre" value={formData.nombre || ''} onChange={handleChange} placeholder="Sede Principal" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Dirección Física</label>
+                        <input required className="premium-input" name="direccion" value={formData.direccion || ''} onChange={handleChange} placeholder="Av. Los Pinos 123..." />
+                      </div>
+                      <div className="flex items-center gap-3 p-4 bg-[var(--c-secundario)] rounded-2xl border border-[var(--c-borde)]">
+                        <input type="checkbox" name="estado" id="estado_sede" checked={formData.estado ?? true} onChange={handleChange} className="w-5 h-5 accent-[var(--c-accion)] rounded-lg cursor-pointer" />
+                        <label htmlFor="estado_sede" className="text-sm font-bold text-[var(--c-primario)] cursor-pointer">Sede habilitada para operaciones</label>
+                      </div>
+                    </div>
+                  )}
+
+                  {modalType === 'caja' && (
+                    <div className="grid grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Código Único</label>
+                        <input required className="premium-input font-mono uppercase" name="codigo" value={formData.codigo || ''} onChange={handleChange} placeholder="CJ-01" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Denominación</label>
+                        <input required className="premium-input" name="nombre_caja" value={formData.nombre_caja || ''} onChange={handleChange} placeholder="Caja General" />
+                      </div>
+                      <div className="col-span-2 grid grid-cols-2 gap-4 p-4 bg-[var(--c-secundario)] rounded-2xl border border-[var(--c-borde)]">
+                        <div>
+                          <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-widest mb-1">Mínimo sugerido</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--c-texto-sub)]">S/</span>
+                            <input required type="number" className="premium-input !pl-8" name="saldo_minimo" value={formData.saldo_minimo || 0} onChange={handleChange} />
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-widest mb-1">Límite máximo</label>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--c-texto-sub)]">S/</span>
+                            <input required type="number" className="premium-input !pl-8" name="saldo_maximo" value={formData.saldo_maximo || 0} onChange={handleChange} />
+                          </div>
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-3 ml-1">Identidad de la Caja (Bancos)</label>
+                        <div className="grid grid-cols-5 gap-3">
+                          {[
+                            { name: 'Efectivo', p: '#22C55E' },
+                            { name: 'BBVA', p: '#2563EB' },
+                            { name: 'Interbank', p: '#FACC15' },
+                            { name: 'B. Nación', p: '#DC2626' },
+                            { name: 'BCP', p: '#7C3AED' }
+                          ].map(bank => (
+                            <button
+                              key={bank.name}
+                              type="button"
+                              onClick={() => setFormData(prev => ({ ...prev, color_primario: bank.p, color_secundario: bank.p }))}
+                              className={`flex flex-col items-center gap-2 p-2 rounded-xl border-2 transition-all ${formData.color_primario === bank.p ? 'border-[var(--c-accion)] bg-[var(--c-fondo-card)] shadow-sm' : 'border-transparent bg-[var(--c-secundario)] opacity-60 hover:opacity-100'}`}
+                            >
+                              <div className="w-8 h-8 rounded-lg shadow-sm" style={{ background: bank.p }}></div>
+                              <span className="text-[8px] font-black uppercase tracking-tighter text-center leading-none">{bank.name}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="col-span-2">
+                         <div className="flex items-start gap-3 p-3 bg-[var(--c-accion-pastel)] rounded-xl border border-[var(--c-accion)]/10">
+                            <svg className="w-5 h-5 text-[var(--c-accion)] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-[11px] text-[var(--c-primario)] font-medium leading-tight">Este tipo de caja se replicará automáticamente en todas las sedes activas del sistema.</p>
+                         </div>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex justify-end gap-4 mt-10 pt-8 border-t border-[var(--c-borde)]">
+                    <button type="button" onClick={handleCloseModal} className="px-6 py-3 text-sm font-bold text-[var(--c-texto-sub)] hover:text-[var(--c-primario)] transition-colors">Descartar</button>
+                    <button type="submit" className="btn-gold !px-10 !py-3.5 !text-sm">
+                      {isEditing ? 'Confirmar Cambios' : 'Crear Registro'}
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         )}
