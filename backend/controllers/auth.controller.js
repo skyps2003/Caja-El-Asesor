@@ -8,15 +8,18 @@ const login = async (req, res) => {
 
     const usuario = await Usuario.findOne({ login_usuario }).populate('id_sede', 'nombre');
     if (!usuario) {
+      console.log(`Login fallido: Usuario "${login_usuario}" no encontrado`);
       return res.status(401).json({ mensaje: 'Credenciales invalidas' });
     }
 
     if (!usuario.estado) {
+      console.log(`Login fallido: Usuario "${login_usuario}" deshabilitado`);
       return res.status(403).json({ mensaje: 'Usuario deshabilitado' });
     }
 
     const passwordValido = await bcrypt.compare(password, usuario.password);
     if (!passwordValido) {
+      console.log(`Login fallido: Contraseña incorrecta para "${login_usuario}"`);
       return res.status(401).json({ mensaje: 'Credenciales invalidas' });
     }
 

@@ -36,3 +36,7 @@ const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en puerto ${PORT}`);
 });
+
+app.use(cors({
+  origin: 'https://caja-el-asesor.vercel.app' // Tu link de Vercel
+}));

@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API = axios.create({
-  baseURL: '/api',
+const API = axios.create({    
+  baseURL: import.meta.env.VITE_API_URL || 'https://caja-el-asesor.onrender.com/api',
 });
 
 // Interceptor para agregar token JWT en cada request
