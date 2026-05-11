@@ -87,7 +87,7 @@ const aprobarComprobante = async (req, res) => {
         id_usuario_aprobador,
         fecha_aprobacion: new Date(),
       },
-      { new: true }
+      { returnDocument: 'after' }
     )
       .populate('id_usuario_creador', 'login_usuario nombre')
       .populate('id_usuario_aprobador', 'login_usuario nombre')
@@ -130,7 +130,7 @@ const rechazarComprobante = async (req, res) => {
         motivo_rechazo,
         fecha_aprobacion: new Date(),
       },
-      { new: true }
+      { returnDocument: 'after' }
     )
       .populate('id_usuario_creador', 'login_usuario nombre')
       .populate('id_usuario_aprobador', 'login_usuario nombre')
@@ -171,7 +171,7 @@ const asignarComprobanteAMovimiento = async (req, res) => {
         tipo_comprobante,
         estado_comprobante: 'ASIGNADO',
       },
-      { new: true }
+      { returnDocument: 'after' }
     )
       .populate('id_caja', 'codigo nombre_caja')
       .populate('id_usuario', 'login_usuario nombre');

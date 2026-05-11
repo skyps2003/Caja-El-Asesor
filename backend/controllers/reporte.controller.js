@@ -2,7 +2,6 @@ const ExcelJS = require('exceljs');
 const path = require('path');
 const fs = require('fs');
 const Movimiento = require('../models/Movimiento');
-const PeriodoMensual = require('../models/PeriodoMensual');
 const Caja = require('../models/Caja');
 
 // ── Generar reporte mensual en Excel ─────────────────────────
@@ -121,7 +120,7 @@ const generarReporteMensual = async (req, res) => {
     movimientos.forEach((mov) => {
       worksheet.getCell(`A${currentRow}`).value = new Date(mov.fecha_hora).toLocaleDateString('es-PE');
       
-      let desc = mov.descripcion || 'Sin descripción';
+      let desc = mov.concepto || 'Sin descripción';
       if (mov.tipo_comprobante === 'FACTURA') {
         desc += ` (RUC: ${mov.ruc || '—'} - ${mov.razon_social || '—'})`;
       }
@@ -131,7 +130,7 @@ const generarReporteMensual = async (req, res) => {
       worksheet.getCell(`C${currentRow}`).value = c ? c.codigo : '—';
       
       const compPrefix = mov.tipo_comprobante === 'FACTURA' ? 'FAC' : mov.tipo_comprobante === 'RECIBO' ? 'REC' : '';
-      worksheet.getCell(`D${currentRow}`).value = compPrefix ? `${compPrefix}: ${mov.codigo_comprobante}` : 'S/C';
+      worksheet.getCell(`D${currentRow}`).value = compPrefix ? `${compPrefix}: ${mov.numero_comprobante || 'S/N'}` : 'S/C';
       
       if (mov.tipo === false || mov.tipo === 0) {
         worksheet.getCell(`E${currentRow}`).value = mov.monto;
@@ -141,7 +140,7 @@ const generarReporteMensual = async (req, res) => {
         worksheet.getCell(`F${currentRow}`).numFmt = '"S/ " #,##0.00';
       }
 
-      worksheet.getCell(`G${currentRow}`).value = mov.saldo_actual;
+      worksheet.getCell(`G${currentRow}`).value = mov.saldo_resultante;
       worksheet.getCell(`G${currentRow}`).numFmt = '"S/ " #,##0.00';
       worksheet.getCell(`G${currentRow}`).fill = fillGreen;
       
@@ -157,33 +156,50 @@ const generarReporteMensual = async (req, res) => {
 
     // 5. Tabla resumen por tipo (L7...)
     let resRow = 7;
-    worksheet.getCell(`M${resRow}`).value = 'TIPO DE CAJA';
-    worksheet.getCell(`N${resRow}`).value = 'SALDO';
+    worksheet.mergeCells(`M${resRow}:N${resRow}`);
+    worksheet.getCell(`M${resRow}`).value = 'RESUMEN DE SALDOS POR CUENTA';
     worksheet.getCell(`M${resRow}`).fill = fillHeader;
-    worksheet.getCell(`N${resRow}`).fill = fillHeader;
     worksheet.getCell(`M${resRow}`).font = { bold: true, color: { argb: 'FF38761D' } };
-    worksheet.getCell(`N${resRow}`).font = { bold: true, color: { argb: 'FF38761D' } };
+    worksheet.getCell(`M${resRow}`).alignment = { horizontal: 'center' };
+    resRow++;
+
+    worksheet.getCell(`M${resRow}`).value = 'TIPO DE CUENTA / CAJA';
+    worksheet.getCell(`N${resRow}`).value = 'SALDO ACTUAL';
+    worksheet.getCell(`M${resRow}`).font = { bold: true, size: 9 };
+    worksheet.getCell(`N${resRow}`).font = { bold: true, size: 9 };
+    worksheet.getCell(`M${resRow}`).border = borderFull;
+    worksheet.getCell(`N${resRow}`).border = borderFull;
     resRow++;
 
     todasLasCajas.forEach(c => {
-      worksheet.getCell(`M${resRow}`).value = `Saldo en ${c.nombre_caja}`;
+      worksheet.getCell(`M${resRow}`).value = c.nombre_caja;
       worksheet.getCell(`N${resRow}`).value = c.saldo_actual;
       worksheet.getCell(`N${resRow}`).numFmt = '"S/ " #,##0.00';
       worksheet.getCell(`M${resRow}`).fill = fillBlue;
       worksheet.getCell(`N${resRow}`).fill = fillBlue;
+      worksheet.getCell(`M${resRow}`).border = borderFull;
+      worksheet.getCell(`N${resRow}`).border = borderFull;
       resRow++;
     });
 
+    // Añadir una instrucción para el gráfico de donas
+    resRow++;
+    worksheet.mergeCells(`M${resRow}:N${resRow}`);
+    worksheet.getCell(`M${resRow}`).value = '💡 Tip: Seleccione la tabla de arriba e inserte un "Gráfico de Donas" para visualizar la distribución.';
+    worksheet.getCell(`M${resRow}`).font = { italic: true, size: 8, color: { argb: 'FF555555' } };
+    worksheet.getCell(`M${resRow}`).alignment = { wrapText: true };
+
     // Ajustar anchos
     worksheet.getColumn('A').width = 12;
-    worksheet.getColumn('B').width = 30;
-    worksheet.getColumn('C').width = 10;
-    worksheet.getColumn('D').width = 15;
+    worksheet.getColumn('B').width = 45; // Más ancho para conceptos largos
+    worksheet.getColumn('C').width = 12;
+    worksheet.getColumn('D').width = 20;
     worksheet.getColumn('E').width = 15;
     worksheet.getColumn('F').width = 15;
     worksheet.getColumn('G').width = 15;
-    worksheet.getColumn('M').width = 25;
-    worksheet.getColumn('N').width = 15;
+    worksheet.getColumn('H').width = 18; // Para evitar los ####### en saldo máximo
+    worksheet.getColumn('M').width = 30;
+    worksheet.getColumn('N').width = 18;
 
     // Generar archivo
     const fileName = `Reporte_Caja_Premium_${mes}_${anio}_${Date.now()}.xlsx`;
@@ -203,137 +219,6 @@ const generarReporteMensual = async (req, res) => {
   }
 };
 
-// ── Generar reporte general de caja (todos los períodos) ──────
-const generarReporteGeneral = async (req, res) => {
-  try {
-    const { id_caja } = req.body;
-
-    if (!id_caja) {
-      return res.status(400).json({ mensaje: 'Debe proporcionar id_caja' });
-    }
-
-    // Obtener caja
-    const caja = await Caja.findById(id_caja);
-    if (!caja) {
-      return res.status(404).json({ mensaje: 'Caja no encontrada' });
-    }
-
-    // Obtener todos los períodos de la caja
-    const periodos = await PeriodoMensual.find({ id_caja })
-      .populate('id_usuario_cierre', 'login_usuario')
-      .sort({ anio: 1, mes: 1 });
-
-    // Crear workbook
-    const workbook = new ExcelJS.Workbook();
-    const worksheet = workbook.addWorksheet('Resumen General');
-
-    const headerStyle = {
-      font: { bold: true, color: { argb: 'FFFFFFFF' }, size: 12 },
-      fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF667EEA' } },
-      alignment: { horizontal: 'center', vertical: 'center' },
-      border: {
-        top: { style: 'thin' },
-        left: { style: 'thin' },
-        bottom: { style: 'thin' },
-        right: { style: 'thin' },
-      },
-    };
-
-    const titleStyle = {
-      font: { bold: true, size: 16 },
-      alignment: { horizontal: 'center' },
-    };
-
-    const numberFormat = '#,##0.00';
-
-    // Título
-    worksheet.merge('A1:G1');
-    worksheet.getCell('A1').value = `📊 RESUMEN GENERAL - ${caja.nombre_caja}`;
-    worksheet.getCell('A1').style = titleStyle;
-    worksheet.row(1).height = 25;
-
-    // Headers
-    const headers = [
-      'Mes/Año',
-      'Saldo Inicial',
-      'Ingresos',
-      'Egresos',
-      'Saldo Final Esperado',
-      'Saldo Final Real',
-      'Diferencia',
-    ];
-
-    headers.forEach((header, colIndex) => {
-      const cell = worksheet.getCell(3, colIndex + 1);
-      cell.value = header;
-      cell.style = headerStyle;
-    });
-
-    // Datos
-    let rowNum = 4;
-    periodos.forEach((periodo) => {
-      const mesAnio = `${periodo.mes}/${periodo.anio}`;
-      const esperado =
-        periodo.saldo_inicial +
-        (periodo.total_ingresos || 0) -
-        (periodo.total_egresos || 0);
-      const diferencia = (periodo.saldo_final || 0) - esperado;
-
-      worksheet.getCell(`A${rowNum}`).value = mesAnio;
-      worksheet.getCell(`B${rowNum}`).value = periodo.saldo_inicial;
-      worksheet.getCell(`C${rowNum}`).value = periodo.total_ingresos || 0;
-      worksheet.getCell(`D${rowNum}`).value = periodo.total_egresos || 0;
-      worksheet.getCell(`E${rowNum}`).value = esperado;
-      worksheet.getCell(`F${rowNum}`).value = periodo.saldo_final || 'No cerrado';
-      worksheet.getCell(`G${rowNum}`).value = diferencia;
-
-      for (let col = 1; col <= 7; col++) {
-        const cell = worksheet.getCell(rowNum, col);
-        if (col > 1) {
-          cell.numFmt = numberFormat;
-        }
-      }
-
-      rowNum++;
-    });
-
-    // Ajustar ancho de columnas
-    worksheet.columns = [
-      { width: 12 },
-      { width: 15 },
-      { width: 15 },
-      { width: 15 },
-      { width: 18 },
-      { width: 15 },
-      { width: 15 },
-    ];
-
-    // Generar archivo
-    const fileName = `Resumen_General_${caja.codigo}_${Date.now()}.xlsx`;
-    const filePath = path.join(__dirname, '../temp', fileName);
-
-    if (!fs.existsSync(path.join(__dirname, '../temp'))) {
-      fs.mkdirSync(path.join(__dirname, '../temp'), { recursive: true });
-    }
-
-    await workbook.xlsx.writeFile(filePath);
-
-    res.download(filePath, fileName, (err) => {
-      if (err) console.error('Error al descargar:', err);
-      fs.unlink(filePath, (err) => {
-        if (err) console.error('Error al eliminar archivo:', err);
-      });
-    });
-  } catch (error) {
-    console.error('Error al generar reporte general:', error);
-    res.status(500).json({
-      mensaje: 'Error al generar reporte general',
-      error: error.message,
-    });
-  }
-};
-
 module.exports = {
   generarReporteMensual,
-  generarReporteGeneral,
 };

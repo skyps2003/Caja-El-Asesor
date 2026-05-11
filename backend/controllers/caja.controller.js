@@ -54,7 +54,7 @@ const obtenerCajaPorId = async (req, res) => {
 
 const actualizarCaja = async (req, res) => {
   try {
-    const caja = await Caja.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const caja = await Caja.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     if (!caja) return res.status(404).json({ mensaje: 'Caja no encontrada' });
     res.json({ mensaje: 'Caja actualizada', caja });
   } catch (error) {

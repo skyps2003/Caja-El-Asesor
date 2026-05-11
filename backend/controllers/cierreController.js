@@ -1,6 +1,7 @@
 const Cierre = require('../models/Cierre');
 const Movimiento = require('../models/Movimiento');
 const Caja = require('../models/Caja');
+const Sede = require('../models/Sede');
 
 // ─── Helper: calcular ingresos/egresos de un array de movimientos ──────────
 const calcularTotales = (movimientos) => {
@@ -17,6 +18,16 @@ const calcularTotales = (movimientos) => {
 const getCajasDeSede = async (id_sede) => {
   const cajas = await Caja.find({ id_sede }).select('_id saldo_actual');
   return cajas;
+};
+
+// ─── Helper: obtener Sede de contexto (Cajero o Admin) ─────────────────────
+const obtenerIdSede = async (req) => {
+  if (req.usuario.id_sede) {
+    return req.usuario.id_sede._id || req.usuario.id_sede;
+  }
+  const sedeDefault = await Sede.findOne();
+  if (!sedeDefault) throw new Error('No hay sedes registradas en el sistema para auditar.');
+  return sedeDefault._id;
 };
 
 // ─── GET /api/cierres — Lista todos los cierres ───────────────────────────
@@ -45,9 +56,9 @@ exports.resumenDiario = async (req, res) => {
     const { dias = 30 } = req.query;
     let filtro = {};
 
-    // Si es cajero, filtrar solo por sus cajas
-    if (req.usuario.rol === 'CAJERO_SEDE') {
-      const idSede = req.usuario.id_sede?._id || req.usuario.id_sede;
+    // Si es cajero o admin, filtrar por la sede que le corresponde
+    if (req.usuario.rol === 'CAJERO_SEDE' || req.usuario.rol === 'ADMINISTRADOR') {
+      const idSede = await obtenerIdSede(req);
       const cajas = await getCajasDeSede(idSede);
       filtro.id_caja = { $in: cajas.map(c => c._id) };
     }
@@ -63,10 +74,23 @@ exports.resumenDiario = async (req, res) => {
     const porDia = {};
     movimientos.forEach((mov) => {
       const dia = mov.fecha_hora.toISOString().split('T')[0];
-      if (!porDia[dia]) porDia[dia] = { fecha: dia, ingresos: 0, egresos: 0, movimientos: 0 };
+      if (!porDia[dia]) porDia[dia] = { fecha: dia, ingresos: 0, egresos: 0, movimientos: 0, detalle_cajas: {} };
       porDia[dia].movimientos++;
-      if (!mov.tipo) porDia[dia].ingresos += mov.monto;
-      else porDia[dia].egresos += mov.monto;
+      
+      const cajaId = mov.id_caja.toString();
+      if (!porDia[dia].detalle_cajas[cajaId]) {
+        porDia[dia].detalle_cajas[cajaId] = { ingresos: 0, egresos: 0, neto: 0 };
+      }
+
+      if (!mov.tipo) {
+        porDia[dia].ingresos += mov.monto;
+        porDia[dia].detalle_cajas[cajaId].ingresos += mov.monto;
+        porDia[dia].detalle_cajas[cajaId].neto += mov.monto;
+      } else {
+        porDia[dia].egresos += mov.monto;
+        porDia[dia].detalle_cajas[cajaId].egresos += mov.monto;
+        porDia[dia].detalle_cajas[cajaId].neto -= mov.monto;
+      }
     });
 
     const resultado = Object.values(porDia).map((d) => ({
@@ -85,8 +109,8 @@ exports.resumenMensual = async (req, res) => {
   try {
     let matchStage = {};
 
-    if (req.usuario.rol === 'CAJERO_SEDE') {
-      const idSede = req.usuario.id_sede?._id || req.usuario.id_sede;
+    if (req.usuario.rol === 'CAJERO_SEDE' || req.usuario.rol === 'ADMINISTRADOR') {
+      const idSede = await obtenerIdSede(req);
       const cajas = await getCajasDeSede(idSede);
       matchStage = { id_caja: { $in: cajas.map(c => c._id) } };
     }
@@ -123,7 +147,7 @@ exports.resumenMensual = async (req, res) => {
 // ─── GET /api/cierres/previsualizar/sede — Pre-cierre global de una Sede ─────
 exports.previsualizarCierre = async (req, res) => {
   try {
-    const idSede = req.usuario.id_sede?._id || req.usuario.id_sede;
+    const idSede = await obtenerIdSede(req);
     const cajas = await getCajasDeSede(idSede);
     const cajaIds = cajas.map(c => c._id);
 
@@ -163,7 +187,7 @@ exports.previsualizarCierre = async (req, res) => {
 // ─── GET /api/cierres/movimientos-periodo — Movimientos de la sede por rango de fechas ─
 exports.movimientosPeriodo = async (req, res) => {
   try {
-    const idSede = req.usuario.id_sede?._id || req.usuario.id_sede;
+    const idSede = await obtenerIdSede(req);
     const { tipo = 'DIARIO', fecha } = req.query; // tipo: DIARIO | MENSUAL, fecha: YYYY-MM-DD o YYYY-MM
     const cajas = await getCajasDeSede(idSede);
     const cajaIds = cajas.map(c => c._id);
@@ -230,7 +254,7 @@ exports.registrarCierre = async (req, res) => {
   try {
     const { tipo, saldo_real, observaciones } = req.body;
     const id_usuario = req.usuario.id;
-    const idSede = req.usuario.id_sede?._id || req.usuario.id_sede;
+    const idSede = await obtenerIdSede(req);
 
     if (!tipo || saldo_real === undefined) {
       return res.status(400).json({ mensaje: 'Faltan campos requeridos: tipo, saldo_real' });
@@ -270,6 +294,37 @@ exports.registrarCierre = async (req, res) => {
       total_movimientos: movimientos.length,
       observaciones,
     });
+
+    // ─── LÓGICA DE CIERRE MENSUAL (VACIADO DE CAJAS) ───
+    if (tipo === 'MENSUAL') {
+      const fechaActual = new Date();
+      // Obtenemos de nuevo las cajas completas para el vaciado
+      const cajasParaVaciar = await Caja.find({ id_sede: idSede });
+      
+      for (const caja of cajasParaVaciar) {
+        const saldo = caja.saldo_actual || 0;
+        if (saldo > 0) {
+          // Crear movimiento de salida para dejar en cero
+          const retiro = new Movimiento({
+            fecha_hora: fechaActual,
+            id_caja: caja._id,
+            id_usuario,
+            tipo: true, // true = EGRESO
+            concepto: 'RETIRO DE FONDOS - CIERRE MENSUAL',
+            monto: saldo,
+            saldo_resultante: 0,
+            tipo_comprobante: 'SIN_COMPROBANTE',
+            estado_comprobante: 'ASIGNADO',
+            observaciones: `Retiro automático generado por el Cierre Mensual del sistema (Cierre ID: ${nuevoCierre._id}).`
+          });
+          await retiro.save();
+          
+          // Actualizar caja a 0
+          caja.saldo_actual = 0;
+          await caja.save();
+        }
+      }
+    }
 
     await nuevoCierre.populate('id_sede', 'nombre');
     await nuevoCierre.populate('id_usuario', 'nombre');

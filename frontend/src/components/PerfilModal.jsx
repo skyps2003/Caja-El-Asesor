@@ -8,24 +8,56 @@ const PerfilModal = ({ onClose }) => {
   const [passwordAntiguo, setPasswordAntiguo] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
-  const [avatarBase64, setAvatarBase64] = useState(usuario.avatar || '');
+  const [avatarPreview, setAvatarPreview] = useState(usuario.avatar || '');
+  const [fotoFile, setFotoFile] = useState(null);
   const [cargando, setCargando] = useState(false);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const fileInputRef = useRef(null);
 
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        setMensaje({ tipo: 'error', texto: 'La imagen no debe superar los 2MB' });
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setAvatarBase64(reader.result);
-      };
-      reader.readAsDataURL(file);
+    if (!file) return;
+
+    if (file.size > 5 * 1024 * 1024) {
+      setMensaje({ tipo: 'error', texto: 'La imagen no debe superar los 5MB' });
+      return;
     }
+
+    // Comprimir la imagen antes de convertirla a Base64
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 250;
+        const MAX_HEIGHT = 250;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+        } else {
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        
+        // Generar un Base64 ultra-ligero (JPEG al 80% de calidad)
+        const base64Compressed = canvas.toDataURL('image/jpeg', 0.8);
+        setAvatarPreview(base64Compressed);
+        setFotoFile(base64Compressed); // Guardamos la cadena comprimida
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSubmit = async (e) => {
@@ -40,7 +72,11 @@ const PerfilModal = ({ onClose }) => {
         return;
       }
 
-      const payload = { nombre, avatar: avatarBase64 };
+      // El avatarUrl ahora es la cadena Base64 comprimida, o la antigua si no cambió
+      const avatarUrl = fotoFile ? fotoFile : usuario.avatar;
+
+      // Actualizar los datos enviando el Base64 directamente en el payload
+      const payload = { nombre, avatar: avatarUrl };
       if (password) {
         payload.password = password;
         payload.passwordAntiguo = passwordAntiguo;
@@ -48,10 +84,9 @@ const PerfilModal = ({ onClose }) => {
 
       const { data } = await API.put(`/usuarios/${usuario._id}`, payload);
       actualizarUsuarioLocal({ 
+        ...usuario,
         nombre: data.usuario.nombre, 
         avatar: data.usuario.avatar,
-        rol: data.usuario.rol,
-        id_sede: data.usuario.id_sede
       });
       setMensaje({ tipo: 'exito', texto: 'Perfil actualizado correctamente' });
       setPasswordAntiguo('');
@@ -98,8 +133,8 @@ const PerfilModal = ({ onClose }) => {
             <div className="relative group shrink-0">
               <div className="w-24 h-24 rounded-[28px] overflow-hidden border border-[var(--c-borde)] shadow-md bg-[var(--c-fondo)] p-1">
                 <div className="w-full h-full rounded-[24px] overflow-hidden bg-[var(--c-secundario)]">
-                  {avatarBase64 ? (
-                    <img src={avatarBase64} alt="Avatar" className="w-full h-full object-cover" />
+                  {avatarPreview ? (
+                    <img src={avatarPreview} alt="Avatar" className="w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center opacity-20">
                        <svg className="w-10 h-10" fill="currentColor" viewBox="0 0 24 24"><path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0112.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
@@ -120,7 +155,7 @@ const PerfilModal = ({ onClose }) => {
             <div className="space-y-1">
                <h4 className="text-[10px] font-bold text-[var(--c-accion)] uppercase tracking-widest">Identidad Visual</h4>
                <p className="text-sm font-black text-[var(--c-primario)]">Personalice su avatar</p>
-               <p className="text-[11px] text-[var(--c-texto-sub)] leading-tight">Formatos JPG/PNG hasta 2MB para una visualización óptima.</p>
+               <p className="text-[11px] text-[var(--c-texto-sub)] leading-tight">Formatos JPG/PNG hasta 5MB para una visualización óptima.</p>
             </div>
           </div>
 

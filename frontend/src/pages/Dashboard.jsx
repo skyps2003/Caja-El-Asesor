@@ -14,7 +14,10 @@ const Dashboard = () => {
   const [cajas, setCajas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [resumenDiario, setResumenDiario] = useState({});
-  const [fechaSeleccionada, setFechaSeleccionada] = useState(new Date().toISOString().split('T')[0]);
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
 
   const THEME_COLORS = ['#1A1A5A', '#3B59DA', '#2D47B8', '#4F6EF7', '#64748B', '#94A3B8'];
 
@@ -48,55 +51,73 @@ const Dashboard = () => {
   const getCajasPorSede = (sedeId) => cajas.filter((c) => (c.id_sede?._id || c.id_sede) === sedeId);
   const getSaldoTotalSede = (sedeId) => getCajasPorSede(sedeId).reduce((acc, c) => acc + c.saldo_actual, 0);
 
-  const dataPie = useMemo(() => {
-    // Si es hoy, mostramos saldos actuales
-    const esHoy = !fechaSeleccionada || fechaSeleccionada === new Date().toISOString().split('T')[0];
+  const chartData = useMemo(() => {
+    const detalle = resumenDiario[fechaSeleccionada]?.detalle_cajas;
     
-    if (esHoy) {
-      const data = usuario.rol === 'ADMINISTRADOR' 
-        ? sedes.map(s => {
-            let color = '#3B59DA';
-            const n = s.nombre.toLowerCase();
-            if (n.includes('abancay')) color = '#A855F7';
-            else if (n.includes('challhuahuacho')) color = '#16A34A';
-            return { name: s.nombre, value: getSaldoTotalSede(s._id), color };
-        })
-        : cajas.map(c => {
-            let color = c.color_primario || '#3B59DA';
-            const n = c.nombre_caja.toLowerCase();
-            if (n.includes('efectivo')) color = '#22C55E';
-            else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
-            else if (n.includes('interbank')) color = '#FACC15';
-            else if (n.includes('nacion')) color = '#DC2626';
-            else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
-            return { name: c.nombre_caja, value: c.saldo_actual, color };
-        });
-      return data.filter(d => d.value > 0);
-    } else {
-      // SI ES HISTÓRICO: Mostramos distribución de INGRESOS por caja para ese día
-      // Esto es más dinámico y útil para ver "qué se movió" ese día
-      const ingresosEseDia = resumenDiario[fechaSeleccionada]?.ingresos || 0;
-      if (ingresosEseDia === 0) return [{ name: 'Sin Ingresos', value: 1, color: 'var(--c-borde)' }];
+    const emptyState = {
+      inner: [{ name: 'Sin Movimientos', value: 1, color: 'var(--c-borde)' }],
+      outer: []
+    };
 
-      const data = cajas.map(c => {
-        let color = c.color_primario || '#3B59DA';
-        // (Nota: En un sistema real filtraríamos los movimientos de ese día por caja)
-        // Por ahora simularemos la distribución proporcional al saldo para que sea visual
-        return { name: c.nombre_caja, value: c.saldo_actual * (ingresosEseDia / saldoTotal), color };
-      });
-      return data.filter(d => d.value > 0);
+    if (!detalle || Object.keys(detalle).length === 0) return emptyState;
+
+    let totalIngresos = 0;
+    let totalEgresos = 0;
+    let outer = [];
+
+    if (usuario.rol === 'ADMINISTRADOR') {
+      outer = sedes.map(s => {
+        const cajasDeSede = getCajasPorSede(s._id);
+        const inG = cajasDeSede.reduce((acc, c) => acc + (detalle[c._id]?.ingresos || 0), 0);
+        const outG = cajasDeSede.reduce((acc, c) => acc + (detalle[c._id]?.egresos || 0), 0);
+        totalIngresos += inG;
+        totalEgresos += outG;
+        
+        let color = '#3B59DA';
+        const n = s.nombre.toLowerCase();
+        if (n.includes('abancay')) color = '#A855F7';
+        else if (n.includes('challhuahuacho')) color = '#16A34A';
+        
+        return { name: s.nombre, value: inG + outG, ingresos: inG, egresos: outG, color };
+      }).filter(d => d.value > 0);
+    } else {
+      outer = cajas.map(c => {
+        const inG = detalle[c._id]?.ingresos || 0;
+        const outG = detalle[c._id]?.egresos || 0;
+        totalIngresos += inG;
+        totalEgresos += outG;
+        
+        let color = c.color_primario || '#3B59DA'; // Azul Cobalto Vibrante
+        const n = c.nombre_caja.toLowerCase();
+        if (n.includes('efectivo')) color = '#22C55E';
+        else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
+        else if (n.includes('interbank')) color = '#FACC15';
+        else if (n.includes('nacion')) color = '#DC2626';
+        else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
+        
+        return { name: c.nombre_caja, value: inG + outG, ingresos: inG, egresos: outG, color };
+      }).filter(d => d.value > 0);
     }
-  }, [sedes, cajas, usuario.rol, fechaSeleccionada, resumenDiario, saldoTotal]);
+
+    if (totalIngresos === 0 && totalEgresos === 0) return emptyState;
+
+    const inner = [
+      { name: 'Total Ingresos', value: totalIngresos, color: 'var(--c-entrada)' },
+      { name: 'Total Egresos', value: totalEgresos, color: 'var(--c-salida)' }
+    ].filter(d => d.value > 0);
+
+    return { inner, outer };
+  }, [sedes, cajas, usuario.rol, fechaSeleccionada, resumenDiario]);
 
   const renderCalendario = () => {
-    const hoy = new Date();
-    const anio = hoy.getFullYear();
-    const mes = hoy.getMonth();
+    // Usar la fechaSeleccionada para el calendario o la actual si no hay seleccionada
+    const fBase = fechaSeleccionada ? new Date(fechaSeleccionada + 'T12:00:00') : new Date();
+    const anio = fBase.getFullYear();
+    const mes = fBase.getMonth();
     const primerDia = new Date(anio, mes, 1).getDay();
     const diasEnMes = new Date(anio, mes + 1, 0).getDate();
     
     const dias = [];
-    // Ajuste para que empiece en Lunes (0=Dom, 1=Lun...)
     const startOffset = primerDia === 0 ? 6 : primerDia - 1;
     
     for (let i = 0; i < startOffset; i++) dias.push(null);
@@ -105,8 +126,8 @@ const Dashboard = () => {
     return (
       <div className="w-full">
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map(d => (
-            <div key={d} className="text-[8px] font-black text-[var(--c-texto-sub)] text-center py-1 uppercase">{d}</div>
+          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d, i) => (
+            <div key={`dow-${i}`} className="text-[8px] font-black text-[var(--c-texto-sub)] text-center py-1 uppercase">{d === 'X' ? 'M' : d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1">
@@ -197,32 +218,48 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           <div className="premium-card h-[400px] flex flex-col">
             <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)] mb-6">
-              {usuario.rol === 'ADMINISTRADOR' ? 'Distribución Global de Capital' : 'Distribución por Caja'}
+              {usuario.rol === 'ADMINISTRADOR' ? 'Volumen Operativo por Sede' : 'Actividad Diaria por Caja'}
             </h3>
-            <div className="flex-1">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie 
-                    data={dataPie} 
-                    cx="50%" 
-                    cy="50%" 
-                    innerRadius={60} 
-                    outerRadius={100} 
-                    paddingAngle={8} 
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {dataPie.map((entry, i) => (
-                      <Cell key={i} fill={entry.color} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ background: 'var(--c-fondo-card)', border: '1px solid var(--c-accion)', borderRadius: '12px' }}
-                    itemStyle={{ color: 'var(--c-accion)' }}
-                  />
-                  <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '20px' }} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex-1 min-h-[300px] flex items-center justify-center">
+              {chartData.inner[0].name === 'Sin Movimientos' ? (
+                <div className="w-full h-full flex flex-col items-center justify-center opacity-40">
+                   <svg className="w-12 h-12 mb-3 text-[var(--c-texto-sub)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" /></svg>
+                   <p className="text-xs font-bold text-[var(--c-texto-sub)] uppercase tracking-widest">Sin Movimientos</p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                  <PieChart>
+                    <Tooltip 
+                      contentStyle={{ background: 'var(--c-fondo-card)', border: '1px solid var(--c-accion)', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
+                      itemStyle={{ color: 'var(--c-texto)' }}
+                      formatter={(value, name, props) => {
+                        if (name.includes('Total')) return [`S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`, name];
+                        return [
+                          `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })} (Ing: S/${props.payload.ingresos} | Egr: S/${props.payload.egresos})`,
+                          name
+                        ];
+                      }}
+                    />
+                    <Pie 
+                      data={chartData.inner} 
+                      cx="50%" cy="50%" 
+                      innerRadius={45} outerRadius={65} 
+                      dataKey="value" stroke="none"
+                    >
+                      {chartData.inner.map((entry, i) => <Cell key={`inner-${i}`} fill={entry.color} />)}
+                    </Pie>
+                    <Pie 
+                      data={chartData.outer} 
+                      cx="50%" cy="50%" 
+                      innerRadius={75} outerRadius={110} 
+                      paddingAngle={4} dataKey="value" stroke="none"
+                    >
+                      {chartData.outer.map((entry, i) => <Cell key={`outer-${i}`} fill={entry.color} />)}
+                    </Pie>
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', paddingTop: '20px', fontWeight: 'bold' }} />
+                  </PieChart>
+                </ResponsiveContainer>
+              )}
             </div>
           </div>
 
@@ -253,7 +290,7 @@ const Dashboard = () => {
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between mb-6">
                   <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)]">Calendario de Actividad</h3>
-                  {fechaSeleccionada === new Date().toISOString().split('T')[0] && (
+                  {fechaSeleccionada === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() && (
                     <span className="flex items-center gap-1.5 text-[8px] font-black text-[var(--c-entrada)] bg-[var(--c-success-pastel)] px-2 py-0.5 rounded-full animate-pulse">
                       <span className="w-1 h-1 bg-[var(--c-entrada)] rounded-full"></span>
                       EN VIVO

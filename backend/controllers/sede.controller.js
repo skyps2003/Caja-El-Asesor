@@ -31,7 +31,7 @@ const obtenerSedePorId = async (req, res) => {
 
 const actualizarSede = async (req, res) => {
   try {
-    const sede = await Sede.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const sede = await Sede.findByIdAndUpdate(req.params.id, req.body, { returnDocument: 'after' });
     if (!sede) return res.status(404).json({ mensaje: 'Sede no encontrada' });
     res.json({ mensaje: 'Sede actualizada', sede });
   } catch (error) {

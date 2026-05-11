@@ -7,7 +7,5 @@ const { verificarToken } = require('../middlewares/auth.middleware');
 // Generar reporte mensual
 router.post('/mensual', verificarToken, reporteController.generarReporteMensual);
 
-// Generar reporte general de caja
-router.post('/general', verificarToken, reporteController.generarReporteGeneral);
 
 module.exports = router;

@@ -168,7 +168,7 @@ const actualizarEstadoMovimiento = async (req, res) => {
         motivo_rechazo: motivo_rechazo || undefined,
         estado_sustento: estado_sustento || undefined
       },
-      { new: true }
+      { returnDocument: 'after' }
     ).populate('id_caja', 'codigo nombre_caja')
      .populate('id_usuario', 'login_usuario rol');
 

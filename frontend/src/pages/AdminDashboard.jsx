@@ -69,6 +69,7 @@ const AdminDashboard = () => {
   const [cargando, setCargando] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [filtroMovimientos, setFiltroMovimientos] = useState('PENDIENTE'); // 'TODOS', 'PENDIENTE'
+  const [cajaFilter, setCajaFilter] = useState('');
 
   const cargarDatos = async () => {
     try {
@@ -100,6 +101,9 @@ const AdminDashboard = () => {
   const [currentEntity, setCurrentEntity] = useState(null);
   const [formData, setFormData] = useState({});
   const [aplicarATodasSedes, setAplicarATodasSedes] = useState(false);
+  
+  // Modal State for Deletion
+  const [modalEliminar, setModalEliminar] = useState({ isOpen: false, type: null, id: null });
 
   const handleOpenModal = (type, entity = null) => {
     setModalType(type);
@@ -171,16 +175,22 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleDelete = async (type, id) => {
-    if (window.confirm(`¿Estás seguro de eliminar este ${type}?`)) {
-      try {
-        await API.delete(`/${type}s/${id}`);
-        await cargarDatos();
-      } catch (error) {
-        console.error('Error al eliminar', error);
-        alert('Error al eliminar');
-      }
+  const confirmarEliminacion = async () => {
+    if (!modalEliminar.isOpen) return;
+    const { type, id } = modalEliminar;
+    try {
+      await API.delete(`/${type}s/${id}`);
+      await cargarDatos();
+      setModalEliminar({ isOpen: false, type: null, id: null });
+    } catch (error) {
+      console.error('Error al eliminar', error);
+      alert('Error al eliminar');
+      setModalEliminar({ isOpen: false, type: null, id: null });
     }
+  };
+
+  const handleDelete = (type, id) => {
+    setModalEliminar({ isOpen: true, type, id });
   };
 
   if (cargando) return <Loader mensaje="Cargando Administración..." />;
@@ -209,7 +219,7 @@ const AdminDashboard = () => {
                     <span className="w-2 h-2 bg-[var(--c-accion)] rounded-full"></span>
                     Distribución de Capital
                   </h3>
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height={300} minWidth={0}>
                     <PieChart>
                       <Pie
                         data={cajas.map(c => {
@@ -233,7 +243,7 @@ const AdminDashboard = () => {
                         stroke="none"
                       >
                         {cajas.map((c, index) => {
-                          let color = c.color_primario;
+                          let color = c.color_primario || '#3B59DA';
                           const n = c.nombre_caja.toLowerCase();
                           if (n.includes('efectivo')) color = '#22C55E';
                           else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
@@ -323,6 +333,17 @@ const AdminDashboard = () => {
                   </div>
                 )}
                 
+                {tabActiva === 'movimientos' && (
+                  <select 
+                     className="premium-input !py-2.5 !text-xs !w-48 !bg-[var(--c-fondo-card)] shadow-sm font-bold text-[var(--c-primario)]"
+                     value={cajaFilter}
+                     onChange={(e) => setCajaFilter(e.target.value)}
+                  >
+                     <option value="">Todas las Cuentas</option>
+                     {cajas.map(c => <option key={c._id} value={c._id}>{c.nombre_caja}</option>)}
+                  </select>
+                )}
+
                 <div className="relative">
                   <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-texto-sub)]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
                   <input
@@ -437,13 +458,30 @@ const AdminDashboard = () => {
                       </tr>
                     ))}
                     {tabActiva === 'movimientos' && movimientos.filter(m => {
-                      const matchSearch = m.concepto.toLowerCase().includes(searchTerm.toLowerCase()) || m.id_caja?.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+                      const matchSearch = m.concepto?.toLowerCase().includes(searchTerm.toLowerCase()) || m.id_caja?.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
                       const matchFiltro = filtroMovimientos === 'TODOS' ? true : m.estado_comprobante === 'PENDIENTE_ASIGNACION';
-                      return matchSearch && matchFiltro;
-                    }).map(m => (
+                      const matchCaja = cajaFilter ? m.id_caja?._id === cajaFilter : true;
+                      return matchSearch && matchFiltro && matchCaja;
+                    }).map(m => {
+                      const cajaData = cajas.find(c => c._id === (m.id_caja?._id || m.id_caja));
+                      const colorCaja = cajaData?.color_primario || m.id_caja?.color_primario || '#3B59DA';
+                      
+                      return (
                       <tr key={m._id}>
                         <td className="text-[10px] font-bold opacity-60 uppercase">{new Date(m.fecha_hora).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' })}</td>
-                        <td className="font-black text-[var(--c-accion)] text-[10px] tracking-widest">{m.id_caja?.codigo}</td>
+                        <td>
+                          <div 
+                            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border shadow-sm"
+                            style={{ 
+                              color: colorCaja, 
+                              backgroundColor: `${colorCaja}12`,
+                              borderColor: `${colorCaja}30`
+                            }}
+                          >
+                            <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colorCaja }}></div>
+                            {m.id_caja?.nombre_caja || m.id_caja?.codigo}
+                          </div>
+                        </td>
                         <td>
                           <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${!m.tipo ? 'bg-[var(--c-success-pastel)] text-green-700' : 'bg-[var(--c-danger-pastel)] text-red-700'}`}>
                             {!m.tipo ? 'Ingreso' : 'Egreso'}
@@ -474,7 +512,8 @@ const AdminDashboard = () => {
                           )}
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
               </tbody>
             </table>
           </div>
@@ -614,6 +653,42 @@ const AdminDashboard = () => {
             </div>
           </div>
         )}
+
+      {/* Modal Premium de Eliminación */}
+      {modalEliminar.isOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[var(--c-primario)]/20 backdrop-blur-md animate-fadeIn">
+          <div className="bg-[var(--c-fondo-card)] rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden border border-[var(--c-borde)] animate-scaleIn">
+            <div className="p-8 text-center relative">
+              <button onClick={() => setModalEliminar({ isOpen: false, type: null, id: null })} className="absolute top-4 right-4 p-2 rounded-full hover:bg-[var(--c-secundario)] transition-colors text-[var(--c-texto-sub)]">
+                <XIcon />
+              </button>
+              <div className="w-20 h-20 mx-auto bg-red-500/10 rounded-full flex items-center justify-center mb-5 border-4 border-red-500/10">
+                <svg className="w-10 h-10 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+              </div>
+              <h3 className="text-xl font-bold text-[var(--c-primario)] mb-3">¿Confirmar Eliminación?</h3>
+              <p className="text-sm text-[var(--c-texto-sub)] mb-8 leading-relaxed">
+                Estás a punto de eliminar este registro de <span className="font-bold text-[var(--c-primario)] uppercase px-2 py-0.5 bg-[var(--c-secundario)] rounded border border-[var(--c-borde)]">{modalEliminar.type}</span>. Esta acción no se puede deshacer.
+              </p>
+              <div className="flex gap-4">
+                <button 
+                  onClick={() => setModalEliminar({ isOpen: false, type: null, id: null })}
+                  className="flex-1 px-4 py-3.5 rounded-xl border border-[var(--c-borde)] bg-[var(--c-secundario)] text-[var(--c-texto-sub)] font-bold hover:text-[var(--c-primario)] hover:border-[var(--c-primario)]/30 transition-all text-xs uppercase tracking-wider"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  onClick={confirmarEliminacion}
+                  className="flex-1 px-4 py-3.5 rounded-xl bg-red-600 text-white font-bold shadow-lg hover:bg-red-700 hover:shadow-red-500/30 transition-all text-xs uppercase tracking-wider border-2 border-transparent hover:border-white/20"
+                >
+                  Sí, Eliminar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       </main>
     </>

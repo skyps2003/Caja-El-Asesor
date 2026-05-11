@@ -41,6 +41,7 @@ const login = async (req, res) => {
         login_usuario: usuario.login_usuario,
         rol: usuario.rol,
         id_sede: usuario.id_sede,
+        avatar: usuario.avatar,
       },
     });
   } catch (error) {

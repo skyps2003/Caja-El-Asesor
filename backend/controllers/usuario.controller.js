@@ -71,7 +71,7 @@ const actualizarUsuario = async (req, res) => {
       datosActualizar.password = await bcrypt.hash(password, salt);
     }
 
-    const usuario = await Usuario.findByIdAndUpdate(req.params.id, datosActualizar, { new: true }).select('-password');
+    const usuario = await Usuario.findByIdAndUpdate(req.params.id, datosActualizar, { returnDocument: 'after' }).select('-password');
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     
     res.json({ mensaje: 'Usuario actualizado exitosamente', usuario });
@@ -90,4 +90,31 @@ const eliminarUsuario = async (req, res) => {
   }
 };
 
-module.exports = { crearUsuario, obtenerUsuarios, obtenerUsuarioPorId, actualizarUsuario, eliminarUsuario };
+const actualizarAvatar = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ mensaje: 'No se subió ninguna imagen' });
+    }
+
+    const avatarUrl = `/uploads/${req.file.filename}`;
+    const usuario = await Usuario.findByIdAndUpdate(
+      req.params.id,
+      { avatar: avatarUrl },
+      { returnDocument: 'after' }
+    ).select('-password');
+
+    if (!usuario) {
+      return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    }
+
+    res.json({
+      mensaje: 'Avatar actualizado con éxito',
+      avatar: avatarUrl,
+      usuario
+    });
+  } catch (error) {
+    res.status(500).json({ mensaje: 'Error al actualizar avatar', error: error.message });
+  }
+};
+
+module.exports = { crearUsuario, obtenerUsuarios, obtenerUsuarioPorId, actualizarUsuario, eliminarUsuario, actualizarAvatar };

@@ -17,6 +17,7 @@ const Movimientos = () => {
   const [cargandoData, setCargandoData] = useState(true);
   const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [cajaFilter, setCajaFilter] = useState('');
 
   const [formData, setFormData] = useState({
     id_caja: cajaIdParam || '',
@@ -447,16 +448,26 @@ const Movimientos = () => {
               <div className="w-1.5 h-8 bg-[var(--c-accion)] rounded-full" />
               <h2 className="text-2xl font-heading font-bold text-[var(--c-primario)]">Auditoría de Movimientos</h2>
             </div>
-            
-            <div className="relative">
-              <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-texto-sub)] opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-              <input
-                type="text"
-                placeholder="Filtrar por concepto o código..."
-                className="premium-input !py-2.5 !pl-11 !text-xs !w-80 !bg-[var(--c-fondo-card)] shadow-sm"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex flex-wrap items-center gap-4">
+              <select 
+                 className="premium-input !py-2.5 !text-xs !w-48 !bg-[var(--c-fondo-card)] shadow-sm font-bold text-[var(--c-primario)]"
+                 value={cajaFilter}
+                 onChange={(e) => setCajaFilter(e.target.value)}
+              >
+                 <option value="">Todas las Cuentas</option>
+                 {cajas.map(c => <option key={c._id} value={c._id}>{c.nombre_caja}</option>)}
+              </select>
+              
+              <div className="relative">
+                <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--c-texto-sub)] opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input
+                  type="text"
+                  placeholder="Buscar por concepto..."
+                  className="premium-input !py-2.5 !pl-11 !text-xs !w-64 !bg-[var(--c-fondo-card)] shadow-sm"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
             </div>
           </div>
 
@@ -474,20 +485,32 @@ const Movimientos = () => {
                 </tr>
               </thead>
               <tbody>
-                {movimientos.filter(m => 
-                  m.concepto?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                  m.id_caja?.codigo?.toLowerCase().includes(searchTerm.toLowerCase())
-                ).slice(0, 20).map(mov => (
+                {movimientos.filter(m => {
+                  const matchSearch = m.concepto?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                                      m.id_caja?.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
+                  const matchCaja = cajaFilter ? m.id_caja?._id === cajaFilter : true;
+                  return matchSearch && matchCaja;
+                }).slice(0, 20).map(mov => {
+                  const cajaData = cajas.find(c => c._id === (mov.id_caja?._id || mov.id_caja));
+                  const colorCaja = cajaData?.color_primario || mov.id_caja?.color_primario || '#3B59DA';
+                  
+                  return (
                   <tr key={mov._id}>
                     <td className="text-[10px] font-bold opacity-60 uppercase">
                       {new Date(mov.fecha_hora).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' })}
                     </td>
-                    <td className="flex items-center gap-2">
+                    <td>
                       <div 
-                        className="w-2.5 h-2.5 rounded-full" 
-                        style={{ backgroundColor: mov.id_caja?.color_primario || '#ccc' }}
-                      ></div>
-                      <span className="font-black text-[var(--c-accion)] text-[10px] tracking-widest">{mov.id_caja?.codigo}</span>
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-black tracking-widest uppercase border shadow-sm"
+                        style={{ 
+                          color: colorCaja, 
+                          backgroundColor: `${colorCaja}12`,
+                          borderColor: `${colorCaja}30`
+                        }}
+                      >
+                        <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: colorCaja }}></div>
+                        {mov.id_caja?.nombre_caja || mov.id_caja?.codigo}
+                      </div>
                     </td>
                     <td>
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter ${!mov.tipo ? 'bg-[var(--c-success-pastel)] text-green-700' : 'bg-[var(--c-danger-pastel)] text-red-700'}`}>
@@ -506,7 +529,8 @@ const Movimientos = () => {
                       </div>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

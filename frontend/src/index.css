@@ -5,19 +5,19 @@
    DESIGN SYSTEM - EL ASESOR (Midnight & Cobalt)
    ══════════════════════════════════════════════ */
 :root {
-  /* Official Brand Palette - Deep Navy & Cobalt */
+  /* Official Brand Palette - El Asesor */
   --c-primario:      #1A1A5A; /* Azul Marino Profundo */
   --c-accion:        #3B59DA; /* Azul Cobalto Vibrante */
   --c-accion-hover:  #2D47B8;
   --c-secundario:    #EBEFF5; /* Gris Bruma Sutil */
   --c-fondo:         #FFFFFF; /* Blanco Nieve */
   --c-texto:         #334155; /* Azul Pizarra Oscuro */
-  --c-borde:         #E2E8F0; /* Soft secondary border */
+  --c-borde:         #E2E8F0; /* Soft borders for inputs */
   --c-borde-fuerte:  #0D0D3F; /* Azul Noche */
   
   /* Pastel Accents */
-  --c-primario-pastel: #F0F2FF;
-  --c-accion-pastel:   #E8EDFB;
+  --c-primario-pastel: #EAEBF2;
+  --c-accion-pastel:   #E8ECFB;
   --c-success-pastel:  #F0FDF4;
   --c-danger-pastel:   #FEF2F2;
   
@@ -35,21 +35,21 @@
    DARK MODE - REFINED & SOFT (Pastel accents)
    ══════════════════════════════════════════════ */
 html.dark {
-  --c-fondo:           #0F111A; /* Deep Midnight Navy */
-  --c-fondo-card:      #1A1D29; /* Darker Navy Surface */
-  --c-primario:        #94A3B8; /* Muted Slate */
-  --c-accion:          #818CF8; /* Pastel Cobalt */
-  --c-accion-hover:    #93C5FD;
-  --c-secundario:      #262A3B; /* Elevated Navy */
+  --c-fondo:           #0F0F23; /* Very Dark Navy/Slate */
+  --c-fondo-card:      #171731; /* Elevated Dark Blue */
+  --c-primario:        #EBEFF5; /* Gris Bruma Sutil for headings */
+  --c-accion:          #5974E6; /* Brighter Cobalt for Dark Mode */
+  --c-accion-hover:    #7A90EE;
+  --c-secundario:      #212140; /* Dark inner surface */
   --c-texto:           #E2E8F0;
   --c-texto-sub:       #94A3B8;
-  --c-borde:           #2E3348;
-  --c-entrada:         #34D399; /* Pastel Emerald */
-  --c-salida:          #F87171; /* Pastel Red */
-  --c-sombra-soft:     0 4px 6px -1px rgba(0, 0, 0, 0.4);
-  --c-sombra-premium:  0 10px 15px -3px rgba(0, 0, 0, 0.5);
-  --c-primario-pastel: #1E2235;
-  --c-accion-pastel:   #21263A;
+  --c-borde:           #2A2A54;
+  --c-entrada:         #34D399; 
+  --c-salida:          #F87171; 
+  --c-sombra-soft:     0 4px 10px -2px rgba(0, 0, 0, 0.4);
+  --c-sombra-premium:  0 10px 20px -3px rgba(0, 0, 0, 0.5);
+  --c-primario-pastel: #1E1E3B;
+  --c-accion-pastel:   #1C234D;
 }
 
 @theme {
@@ -98,7 +98,7 @@ h1, h2, h3, h4, .font-heading {
 .premium-card {
   background: var(--c-fondo-card);
   border: 1px solid var(--c-borde);
-  border-radius: 16px;
+  border-radius: 20px;
   padding: 1.75rem;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
@@ -116,11 +116,18 @@ h1, h2, h3, h4, .font-heading {
   content: '';
   position: absolute;
   top: 0; left: 0; width: 100%; height: 4px;
-  background: linear-gradient(90deg, var(--c-primario), var(--c-accion));
+  background: linear-gradient(90deg, var(--c-primario), var(--c-accion), var(--c-primario));
+  background-size: 200% 100%;
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.4s ease;
+  animation: shine 3s linear infinite;
 }
 .premium-card:hover::after { opacity: 1; }
+
+@keyframes shine {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
 
 /* Premium Input - Formal */
 .premium-input {
@@ -138,12 +145,12 @@ h1, h2, h3, h4, .font-heading {
 .premium-input:focus {
   border-color: var(--c-accion);
   background: var(--c-fondo-card);
-  box-shadow: 0 0 0 4px var(--c-accion-glow);
+  box-shadow: 0 0 0 4px var(--c-accion-pastel);
 }
 
 /* Premium Button - Accion (Formal) */
 .btn-gold {
-  background: var(--c-primario);
+  background: var(--c-accion);
   color: white;
   font-weight: 600;
   padding: 0.625rem 1.25rem;
@@ -154,17 +161,17 @@ h1, h2, h3, h4, .font-heading {
   gap: 0.625rem;
   transition: all 0.3s ease;
   cursor: pointer;
-  border: 1px solid var(--c-primario);
+  border: 1px solid var(--c-accion);
   letter-spacing: 0.01em;
   font-size: 0.875rem;
   box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
 
 .btn-gold:hover {
-  background: var(--c-accion);
-  border-color: var(--c-accion);
+  background: var(--c-accion-hover);
+  border-color: var(--c-accion-hover);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px var(--c-accion-glow);
+  box-shadow: 0 4px 12px var(--c-accion-pastel);
 }
 
 .btn-gold:active {
@@ -248,12 +255,12 @@ h1, h2, h3, h4, .font-heading {
 
 /* Login background gradient */
 .login-bg {
-  background: linear-gradient(135deg, #0F0F3D 0%, #1A1A5A 40%, #2D47B8 70%, #3B59DA 100%);
+  background: linear-gradient(135deg, #1A1A5A 0%, #2D47B8 40%, #3B59DA 100%);
   position: relative;
   overflow: hidden;
 }
 html.dark .login-bg {
-  background: linear-gradient(135deg, #060611 0%, #0F1117 40%, #1A1D27 70%, #252836 100%);
+  background: linear-gradient(135deg, #0D0D3F 0%, #1A1A5A 40%, #212140 100%);
 }
 .login-bg::before {
   content: '';

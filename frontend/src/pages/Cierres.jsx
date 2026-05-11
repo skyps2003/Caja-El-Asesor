@@ -139,7 +139,14 @@ const Cierres = () => {
 
   const cargarDatos = useCallback(async () => {
     try {
-      const idSede = usuario.id_sede?._id || usuario.id_sede;
+      let idSede = usuario.id_sede?._id || usuario.id_sede;
+      if (!idSede) {
+        const sedesRes = await API.get('/sedes');
+        if (sedesRes.data && sedesRes.data.length > 0) {
+          idSede = sedesRes.data[0]._id;
+        }
+      }
+
       const [cierresRes, cajasRes] = await Promise.all([
         API.get('/cierres'),
         API.get(`/cajas/sede/${idSede}`)
