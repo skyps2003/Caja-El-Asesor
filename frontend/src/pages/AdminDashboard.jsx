@@ -210,80 +210,6 @@ const AdminDashboard = () => {
             </div>
           </div>
 
-          {/* Capital Distribution Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mb-10 animate-fadeIn delay-100">
-            <div className="lg:col-span-12">
-              <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm flex flex-col md:flex-row items-center gap-10">
-                <div className="flex-1 w-full h-[300px]">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[var(--c-primario)] mb-6 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-[var(--c-accion)] rounded-full"></span>
-                    Distribución de Capital
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300} minWidth={0}>
-                    <PieChart>
-                      <Pie
-                        data={cajas.map(c => {
-                          let color = c.color_primario;
-                          const n = c.nombre_caja.toLowerCase();
-                          if (n.includes('efectivo')) color = '#22C55E';
-                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
-                          else if (n.includes('interbank')) color = '#FACC15';
-                          else if (n.includes('nacion')) color = '#DC2626';
-                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
-                          return { name: c.nombre_caja, value: c.saldo_actual, color };
-                        })}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        animationBegin={200}
-                        animationDuration={1500}
-                        stroke="none"
-                      >
-                        {cajas.map((c, index) => {
-                          let color = c.color_primario || '#3B59DA';
-                          const n = c.nombre_caja.toLowerCase();
-                          if (n.includes('efectivo')) color = '#22C55E';
-                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
-                          else if (n.includes('interbank')) color = '#FACC15';
-                          else if (n.includes('nacion')) color = '#DC2626';
-                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
-                          return <Cell key={`cell-${index}`} fill={color} />;
-                        })}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'var(--c-fondo-card)', 
-                          borderRadius: '16px', 
-                          border: '1px solid var(--c-borde)',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          textTransform: 'uppercase'
-                        }} 
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6 shrink-0 pr-10 max-h-[300px] overflow-y-auto custom-scrollbar">
-                   {cajas.map((c, i) => (
-                     <div key={i} className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color_primario }}></div>
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-wider text-[var(--c-texto-sub)] flex items-center gap-2">
-                            {c.nombre_caja}
-                            <span className="text-[7px] bg-[var(--c-secundario)] px-1 rounded border border-[var(--c-borde)]">{c.id_sede?.nombre || 'Sede Local'}</span>
-                          </p>
-                          <p className="text-sm font-black text-[var(--c-primario)]">S/ {c.saldo_actual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-              </div>
-            </div>
-          </div>
-
           {/* Navigation Tabs - Segmented Control Style */}
           <div className="flex bg-[var(--c-secundario)] p-1.5 rounded-2xl border border-[var(--c-borde)] mb-10 w-fit backdrop-blur-md">
             {[
@@ -518,6 +444,80 @@ const AdminDashboard = () => {
             </table>
           </div>
         </div>
+          {/* Capital Distribution Chart */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10 mb-10 animate-fadeIn delay-100">
+            <div className="lg:col-span-12">
+              <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 w-full h-[300px]">
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[var(--c-primario)] mb-6 flex items-center gap-2">
+                    <span className="w-2 h-2 bg-[var(--c-accion)] rounded-full"></span>
+                    Distribución de Capital
+                  </h3>
+                  <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                    <PieChart>
+                      <Pie
+                        data={cajas.map(c => {
+                          let color = c.color_primario;
+                          const n = c.nombre_caja.toLowerCase();
+                          if (n.includes('efectivo')) color = '#22C55E';
+                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
+                          else if (n.includes('interbank')) color = '#FACC15';
+                          else if (n.includes('nacion')) color = '#DC2626';
+                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
+                          return { name: c.nombre_caja, value: c.saldo_actual, color };
+                        })}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={100}
+                        paddingAngle={2}
+                        dataKey="value"
+                        animationBegin={200}
+                        animationDuration={1500}
+                        stroke="none"
+                      >
+                        {cajas.map((c, index) => {
+                          let color = c.color_primario || '#3B59DA';
+                          const n = c.nombre_caja.toLowerCase();
+                          if (n.includes('efectivo')) color = '#22C55E';
+                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
+                          else if (n.includes('interbank')) color = '#FACC15';
+                          else if (n.includes('nacion')) color = '#DC2626';
+                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
+                          return <Cell key={`cell-${index}`} fill={color} />;
+                        })}
+                      </Pie>
+                      <Tooltip 
+                        contentStyle={{ 
+                          backgroundColor: 'var(--c-fondo-card)', 
+                          borderRadius: '16px', 
+                          border: '1px solid var(--c-borde)',
+                          fontSize: '11px',
+                          fontWeight: '800',
+                          textTransform: 'uppercase'
+                        }} 
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="grid grid-cols-2 gap-x-12 gap-y-6 shrink-0 pr-10 max-h-[300px] overflow-y-auto custom-scrollbar">
+                   {cajas.map((c, i) => (
+                     <div key={i} className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color_primario }}></div>
+                        <div>
+                          <p className="text-[9px] font-black uppercase tracking-wider text-[var(--c-texto-sub)] flex items-center gap-2">
+                            {c.nombre_caja}
+                            <span className="text-[7px] bg-[var(--c-secundario)] px-1 rounded border border-[var(--c-borde)]">{c.id_sede?.nombre || 'Sede Local'}</span>
+                          </p>
+                          <p className="text-sm font-black text-[var(--c-primario)]">S/ {c.saldo_actual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
+                        </div>
+                     </div>
+                   ))}
+                </div>
+              </div>
+            </div>
+          </div>
+
       </div>
 
       {modalOpen && (

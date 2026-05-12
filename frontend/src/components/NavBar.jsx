@@ -36,8 +36,8 @@ const NavBar = () => {
     <nav className="navbar">
       <div className="navbar-container">
         <Link to="/" className="navbar-brand">
-          <span className="brand-icon">💰</span>
-          <span className="brand-text">CajaControl</span>
+          <img src="/loggo.png" alt="Estudio Contable El Asesor" className="brand-logo" />
+          <img src="/letras.png" alt="Estudio Contable El Asesor" className="brand-text-image" />
         </Link>
 
         <ul className="navbar-menu">

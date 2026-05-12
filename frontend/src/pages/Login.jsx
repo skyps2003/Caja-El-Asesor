@@ -14,6 +14,10 @@ const Login = () => {
   const navigate = useNavigate();
   const { tema, toggleTema } = useTheme();
 
+  const logoSrc = tema === 'claro'
+    ? '/Logo para claro.png'
+    : '/Logo para oscuro.png';
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -34,9 +38,9 @@ const Login = () => {
 
   return (
     <div className="min-h-screen bg-fondo flex flex-col items-center justify-center px-4 relative overflow-hidden transition-colors duration-500">
-      
+
       {/* Theme Toggle Button */}
-      <button 
+      <button
         onClick={toggleTema}
         className="fixed top-8 right-8 z-[100] p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all shadow-xl group"
         title={tema === 'claro' ? 'Activar Modo Oscuro' : 'Activar Modo Claro'}
@@ -53,16 +57,12 @@ const Login = () => {
       <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-[var(--c-accion)]/5 rounded-full blur-[150px]" />
 
       <div className="w-full max-w-md animate-fade-in relative z-10">
-        
+
         {/* Brand Header */}
         <div className="text-center mb-10">
-          <div className="inline-block p-4 bg-[var(--c-fondo-card)] rounded-3xl mb-6 border border-[var(--c-borde)] shadow-sm">
-            <svg className="w-12 h-12 text-[var(--c-primario)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-            </svg>
+          <div className="inline-block mb-6">
+            <img src={logoSrc} alt="Estudio Contable El Asesor" className="mx-auto h-36 w-auto" />
           </div>
-          <h1 className="text-3xl font-heading text-[var(--c-primario)] tracking-tight">Estudio Contable El Asesor</h1>
-          <p className="text-[var(--c-accion)] font-bold text-[10px] uppercase tracking-[0.3em] mt-2">Cash Management System</p>
         </div>
 
         {/* Login Card */}
@@ -135,7 +135,7 @@ const Login = () => {
 
         <div className="mt-12 text-center">
           <p className="text-[10px] text-[var(--c-texto-sub)] font-bold uppercase tracking-widest opacity-40">
-            © 2026 Corporación Interoceánica JJJA S.R.L.
+            © 2026 Estudio Juridico Contable El Asesor SAC
           </p>
         </div>
       </div>

@@ -22,24 +22,27 @@
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   text-decoration: none;
   color: white;
   font-weight: 700;
-  font-size: 20px;
   transition: transform 0.3s ease;
 }
 
 .navbar-brand:hover {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
-.brand-icon {
-  font-size: 24px;
+.brand-logo {
+  height: 40px;
+  width: auto;
+  display: block;
 }
 
-.brand-text {
-  letter-spacing: 0.5px;
+.brand-text-image {
+  height: 24px;
+  width: auto;
+  display: block;
 }
 
 .navbar-menu {
