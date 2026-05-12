@@ -5,7 +5,10 @@ const crearUsuario = async (req, res) => {
   try {
     const { nombre, login_usuario, password, rol, id_sede } = req.body;
 
-    const existente = await Usuario.findOne({ login_usuario });
+    const escapedLogin = login_usuario.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const existente = await Usuario.findOne({ 
+      login_usuario: { $regex: new RegExp(`^${escapedLogin}$`, 'i') } 
+    });
     if (existente) {
       return res.status(400).json({ mensaje: 'El login de usuario ya existe' });
     }
@@ -82,6 +85,11 @@ const actualizarUsuario = async (req, res) => {
 
 const eliminarUsuario = async (req, res) => {
   try {
+    // Evitar que un usuario se elimine a sí mismo
+    if (req.usuario.id === req.params.id) {
+      return res.status(400).json({ mensaje: 'No puedes eliminarte a ti mismo.' });
+    }
+
     const usuario = await Usuario.findByIdAndDelete(req.params.id);
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     res.json({ mensaje: 'Usuario eliminado correctamente' });

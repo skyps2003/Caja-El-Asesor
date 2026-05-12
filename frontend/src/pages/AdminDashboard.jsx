@@ -150,7 +150,7 @@ const AdminDashboard = () => {
       toast.success(isEditing ? 'Registro actualizado con éxito' : 'Registro creado con éxito');
     } catch (error) {
       console.error('Error al guardar', error);
-      toast.error('Error al guardar, verifique los datos');
+      toast.error(error.response?.data?.mensaje || 'Error al guardar, verifique los datos');
     }
   };
 
@@ -189,12 +189,16 @@ const AdminDashboard = () => {
       setModalEliminar({ isOpen: false, type: null, id: null });
     } catch (error) {
       console.error('Error al eliminar', error);
-      toast.error('Error al eliminar');
+      toast.error(error.response?.data?.mensaje || 'Error al eliminar');
       setModalEliminar({ isOpen: false, type: null, id: null });
     }
   };
 
   const handleDelete = (type, id) => {
+    if (type === 'usuario' && id === usuario._id) {
+      toast.error('No puedes eliminarte a ti mismo.');
+      return;
+    }
     setModalEliminar({ isOpen: true, type, id });
   };
 

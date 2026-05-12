@@ -6,7 +6,11 @@ const login = async (req, res) => {
   try {
     const { login_usuario, password } = req.body;
 
-    const usuario = await Usuario.findOne({ login_usuario }).populate('id_sede', 'nombre');
+    const escapedLogin = login_usuario.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const usuario = await Usuario.findOne({ 
+      login_usuario: { $regex: new RegExp(`^${escapedLogin}$`, 'i') } 
+    }).populate('id_sede', 'nombre');
+
     if (!usuario) {
       console.log(`Login fallido: Usuario "${login_usuario}" no encontrado`);
       return res.status(401).json({ mensaje: 'El usuario ingresado no existe.' });
