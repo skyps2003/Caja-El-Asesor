@@ -3,16 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import API from '../api/axios';
+import toast from 'react-hot-toast';
+import ThemeToggler from '../components/ThemeToggler';
 
 const Login = () => {
   const [loginUsuario, setLoginUsuario] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const { iniciarSesion } = useAuth();
   const navigate = useNavigate();
-  const { tema, toggleTema } = useTheme();
+  const { tema } = useTheme();
 
   const logoSrc = tema === 'claro'
     ? '/Logo para claro.png'
@@ -20,7 +21,6 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setCargando(true);
     try {
       const { data } = await API.post('/auth/login', {
@@ -28,9 +28,11 @@ const Login = () => {
         password,
       });
       iniciarSesion(data);
+      toast.success('¡Bienvenido al sistema!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.response?.data?.mensaje || 'Credenciales inválidas. Verifique sus datos.');
+      const errorMsg = err.response?.data?.mensaje || 'Error de conexión. Intente nuevamente.';
+      toast.error(errorMsg, { duration: 7000 });
     } finally {
       setCargando(false);
     }
@@ -39,18 +41,10 @@ const Login = () => {
   return (
     <div className="min-h-screen bg-fondo flex flex-col items-center justify-center px-4 relative overflow-hidden transition-colors duration-500">
 
-      {/* Theme Toggle Button */}
-      <button
-        onClick={toggleTema}
-        className="fixed top-8 right-8 z-[100] p-3 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 transition-all shadow-xl group"
-        title={tema === 'claro' ? 'Activar Modo Oscuro' : 'Activar Modo Claro'}
-      >
-        {tema === 'claro' ? (
-          <svg className="w-5 h-5 group-hover:rotate-12 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-        ) : (
-          <svg className="w-5 h-5 group-hover:rotate-90 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-        )}
-      </button>
+      {/* Animated Theme Toggle */}
+      <div className="fixed top-8 right-8 z-[100]">
+        <ThemeToggler />
+      </div>
 
       {/* Background Decor */}
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-[var(--c-accion)]/10 rounded-full blur-[120px]" />
@@ -68,12 +62,6 @@ const Login = () => {
         {/* Login Card */}
         <div className="premium-card !p-10 border-[var(--c-borde)]">
           <h2 className="text-xl font-heading mb-8 text-[var(--c-primario)] text-center">Acceso al Sistema</h2>
-
-          {error && (
-            <div className="mb-6 p-4 rounded-xl text-xs font-bold bg-salida/10 border border-salida/20 text-salida animate-slide-up text-center">
-              {error}
-            </div>
-          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>

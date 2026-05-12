@@ -3,10 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { useState } from 'react';
 import PerfilModal from './PerfilModal';
+import ThemeToggler from './ThemeToggler';
 
 const SidebarLayout = ({ children }) => {
   const { usuario, cerrarSesion } = useAuth();
-  const { tema, toggleTema } = useTheme();
+  const { tema } = useTheme();
   const navigate = useNavigate();
   const [modalPerfilAbierto, setModalPerfilAbierto] = useState(false);
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
@@ -82,7 +83,7 @@ const SidebarLayout = ({ children }) => {
           </div>
 
           <div className="text-center">
-            <h2 className="text-[var(--c-primario)] font-black text-xl tracking-tight transition-colors">
+            <h2 className="text-[var(--c-primario)] font-semibold text-xl tracking-tight transition-colors">
               {usuario?.nombre?.split(' ')[0] || 'Usuario'}
             </h2>
             <div className="mt-2 px-2 py-0.5 border border-[var(--c-borde)] bg-[var(--c-secundario)] rounded-md">
@@ -171,18 +172,7 @@ const SidebarLayout = ({ children }) => {
         {/* Footer */}
         <div className="p-5 border-t border-[var(--c-borde)] bg-[var(--c-fondo-card)] relative z-10">
           <div className="pt-2 flex gap-2">
-            <button
-              onClick={toggleTema}
-              title={`Modo ${tema === 'claro' ? 'Oscuro' : 'Claro'}`}
-              className="flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg border border-[var(--c-borde)] bg-[var(--c-secundario)] text-[var(--c-texto-sub)] hover:text-[var(--c-primario)] hover:border-[var(--c-primario)]/30 transition-all text-[10px] font-black uppercase tracking-wider"
-            >
-              {tema === 'claro' ? (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>
-              ) : (
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
-              )}
-              <span className="hidden lg:inline">{tema === 'claro' ? 'Oscuro' : 'Claro'}</span>
-            </button>
+            <ThemeToggler className="flex-1" />
 
             <button
               onClick={handleCerrarSesion}

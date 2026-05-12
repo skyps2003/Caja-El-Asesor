@@ -1,4 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -13,6 +14,7 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <Toaster position="top-center" containerStyle={{ zIndex: 99999 }} toastOptions={{ duration: 7000, style: { background: 'var(--c-fondo-card)', color: 'var(--c-texto)', border: '1px solid var(--c-borde)' } }} />
         <Router>
           <Routes>
             {/* Ruta publica */}

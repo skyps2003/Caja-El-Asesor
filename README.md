@@ -1,32 +1,42 @@
-# 🏦 Corporación Interoceánica JJJA S.R.L. — Sistema de Gestión de Cajas
+# 🏦 Sistema de Caja — Estudio Jurídico Contable El Asesor SAC
 
-![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
+![React](https://img.shields.io/badge/React_19-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)
 ![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)
 ![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_4-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)
+![Vercel](https://img.shields.io/badge/Vercel-000000?style=for-the-badge&logo=vercel&logoColor=white)
+[![React Doctor](https://www.react.doctor/share/badge?p=frontend&s=87&w=174&f=6)](https://www.react.doctor/share?p=frontend&s=87&w=174&f=6)
 
-¡Bienvenido al sistema financiero y de control de cajas de **Corporación Interoceánica JJJA S.R.L.**! Este proyecto es una solución MERN full-stack diseñada bajo estrictos estándares de UI/UX, orientada a centralizar el control de ingresos y egresos de múltiples sedes, permitiendo auditorías rigurosas, cierres de caja consolidados y generación de reportes profesionales.
-
----
-
-## 🚀 Vista Rápida para Desarrolladores
-
-- **Core:** Arquitectura distribuida por Sedes. Los movimientos pertenecen a Cajas, las Cajas a Sedes, y el Cierre es **Global por Sede**.
-- **Seguridad:** JWT en las cabeceras, contraseñas encriptadas con `bcryptjs` y transacciones atómicas con Mongoose para evitar inconsistencias de saldo.
-- **UX/UI:** Interfaz "Midnight & Gray" con *Glassmorphism*. Incluye modales interactivos para confirmaciones destructivas y Recharts para análisis visual.
-- **Auditoría:** Los cierres mensuales realizan un arqueo y retiro automático de fondos para mantener un historial limpio ("Reset a Cero").
+> Sistema full-stack MERN para la gestión centralizada de cajas, movimientos financieros, cierres contables y auditoría por sedes. Diseñado con estética **Midnight & Cobalt** para uso corporativo formal.
 
 ---
 
-## 🛠️ Tecnologías
+## ✨ Características Principales
 
-| Capa | Tecnología | Propósito |
+| Módulo | Descripción |
+|---|---|
+| 🔐 **Autenticación JWT** | Login con feedback de error detallado (contraseña incorrecta, usuario deshabilitado, etc.) |
+| 📊 **Dashboard Analítico** | Gráficos de distribución por caja y sede con Recharts + calendario de actividad diaria |
+| 💸 **Movimientos** | Registro de ingresos/egresos con validación SUNAT de comprobantes (Factura/Recibo) |
+| 🔒 **Cierres de Caja** | Cierre diario (fotografía contable) y mensual (reset a cero con egreso automático) |
+| 👤 **Gestión Admin** | CRUD completo de Usuarios, Sedes, Cajas y aprobación de movimientos pendientes |
+| 🌙 **Modo Oscuro** | Transición animada con View Transitions API (efecto círculo expansivo) |
+| 📄 **Reportes PDF** | Generación de actas de cierre y reportes financieros con jsPDF |
+
+---
+
+## 🛠️ Stack Tecnológico
+
+| Capa | Tecnología | Versión |
 |---|---|---|
-| **Frontend** | React 19 + Vite | Interfaz rápida, reactiva y modular |
-| **Backend** | Node.js + Express 5 | API REST robusta y asíncrona |
-| **Base de Datos** | MongoDB + Mongoose | Almacenamiento NoSQL con validación de esquemas |
-| **Estilos** | Tailwind CSS 4 | Diseño premium, *Dark Mode* nativo y responsivo |
-| **Reportes** | jsPDF + ExcelJS | Exportación de datos financieros y actas |
+| **Frontend** | React + Vite | 19.x / 8.x |
+| **Backend** | Node.js + Express | 18+ / 5.x |
+| **Base de Datos** | MongoDB + Mongoose | Atlas |
+| **Estilos** | Tailwind CSS + CSS Variables | 4.x |
+| **Notificaciones** | react-hot-toast | 2.x |
+| **Gráficos** | Recharts | 3.x |
+| **Reportes** | jsPDF + AutoTable | 4.x |
+| **Deploy** | Vercel (frontend) + Render (backend) | — |
 
 ---
 
@@ -34,15 +44,16 @@
 
 ```mermaid
 graph TD
-    User((Usuario)) -->|Auth| Frontend[React App]
-    Frontend -->|API Calls| Backend[Express Server]
-    Backend -->|Queries| DB[(MongoDB)]
-    
+    User((Usuario)) -->|Auth JWT| Frontend[React App · Vercel]
+    Frontend -->|API REST| Backend[Express API · Render]
+    Backend -->|Queries| DB[(MongoDB Atlas)]
+
     subgraph "Lógica de Negocio"
         Sede -->|Contiene| Caja
         Caja -->|Registra| Movimiento
-        Movimiento -->|Actualiza| Saldo_Caja
-        Cierre -->|Agrupa| Movimientos_Sede
+        Movimiento -->|Actualiza saldo| Caja
+        Cierre_Diario -->|Fotografía| Movimientos_Sede
+        Cierre_Mensual -->|Reset a cero| Saldo_Cajas
     end
 ```
 
@@ -50,63 +61,125 @@ graph TD
 
 ## 📁 Estructura del Proyecto
 
-```text
+```
 Caja/
 ├── backend/
-│   ├── controllers/      # Lógica: Cierres, Movimientos, Autenticación, Usuarios
-│   ├── models/           # Esquemas (Mongoose)
-│   ├── routes/           # Rutas protegidas
-│   └── server.js         # Punto de entrada y conexión a MongoDB
+│   ├── controllers/      # auth, movimientos, cierres, usuarios, sedes, cajas
+│   ├── middleware/        # verifyToken (JWT guard)
+│   ├── models/            # Esquemas Mongoose (Usuario, Sede, Caja, Movimiento, Cierre)
+│   ├── routes/            # Rutas API protegidas
+│   └── server.js          # Entry point + conexión MongoDB
+│
 └── frontend/
     └── src/
-        ├── api/          # Interceptores Axios
-        ├── context/      # Estados globales (AuthContext, ThemeContext)
-        ├── pages/        # Vistas principales (Dashboard, Movimientos, Cierres)
-        └── components/   # UI Reutilizable (Modales, TopBar, Sidebar)
+        ├── api/           # Instancia Axios + interceptores JWT
+        ├── context/       # AuthContext, ThemeContext (dark mode)
+        ├── components/    # SidebarLayout, ThemeToggler, Loader, PerfilModal
+        └── pages/         # Login, Dashboard, Movimientos, Cierres, AdminDashboard
 ```
 
 ---
 
 ## ⚙️ Instalación y Configuración
 
-### 1. Requisitos previos
-- Node.js (v18+)
-- MongoDB Atlas o Local
+### Requisitos
+- Node.js v18+
+- MongoDB Atlas (o instancia local)
 
-### 2. Clonar e Instalar
+### 1. Clonar el repositorio
+
 ```bash
 git clone <repo-url>
 cd Caja
-
-# Backend
-cd backend && npm install
-
-# Frontend
-cd ../frontend && npm install
 ```
 
-Para instrucciones detalladas de cada entorno, consulta:
-- [Guía del Frontend](./frontend/README.md)
-- [Guía del Backend](./backend/README.md)
+### 2. Configurar el Backend
+
+```bash
+cd backend
+npm install
+```
+
+Crear `backend/.env`:
+
+```env
+MONGODB_URI=mongodb+srv://<usuario>:<password>@cluster.mongodb.net/caja
+JWT_SECRET=tu_clave_secreta_aqui
+PORT=5000
+```
+
+```bash
+npm run dev
+```
+
+### 3. Configurar el Frontend
+
+```bash
+cd frontend
+npm install
+```
+
+Crear `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:5000/api
+```
+
+```bash
+npm run dev
+```
+
+La aplicación estará disponible en `http://localhost:5173`.
 
 ---
 
 ## ⚖️ Roles y Permisos
 
-- **ADMINISTRADOR**: Acceso total al sistema. CRUD completo de Sedes, Cajas y Usuarios. Auditoría global de cierres y reportes maestros.
-- **CAJERO_SEDE**: Restringido a su propia sede física. Puede registrar movimientos operativos, consultar su historial y ejecutar los Cierres de Caja (Diario/Mensual).
+| Rol | Acceso |
+|---|---|
+| **ADMINISTRADOR** | Dashboard global · CRUD de Sedes, Cajas y Usuarios · Aprobación de movimientos · Reportes maestros |
+| **CAJERO_SEDE** | Solo su sede · Registro de movimientos · Historial propio · Cierres diarios y mensuales |
 
 ---
 
-## ⚠️ Notas Técnicas Importantes
+## 📋 Validaciones de Comprobantes (SUNAT)
 
-- **Consistencia de Datos:** Los movimientos usan transacciones de Mongoose (`session`). Si modificas la lógica, mantén la transacción para evitar saldos huérfanos.
-- **Lógica de Cierres:** Un **Cierre Diario** toma una fotografía contable pero no altera el saldo. Un **Cierre Mensual** genera automáticamente "Egresos" para vaciar las cuentas a cero y empezar un nuevo periodo limpio.
+| Tipo | Formato Serie | Campos requeridos |
+|---|---|---|
+| **Factura** | `F001-000001` | Nº correlativo + RUC (11 dígitos) + Razón Social |
+| **Recibo** | `A0001` (letra + números) | Solo Nº correlativo |
+| **Sin Sustento** | — | Ninguno |
+
+El RUC es validado en tiempo real contra el patrón SUNAT: debe comenzar con `10`, `15`, `17` o `20`.
+
+---
+
+## 🚀 Deploy en Vercel
+
+El archivo `vercel.json` en la raíz del frontend configura el rewrite para SPA:
+
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+}
+```
+
+Esto previene el error `404 NOT_FOUND` al refrescar rutas internas como `/dashboard` o `/admin`.
+
+---
+
+## ⚠️ Notas Técnicas
+
+- **Transacciones atómicas:** Los movimientos usan `mongoose session`. Si modificas esa lógica, mantén la transacción para evitar saldos huérfanos.
+- **Cierres:** El cierre **diario** toma una fotografía contable sin alterar saldos. El cierre **mensual** genera egresos automáticos para resetear las cuentas a cero.
+- **Seguridad:** El interceptor Axios detecta errores 401 y redirige al login, excepto en el endpoint `/auth/login` para no interferir con el feedback de credenciales inválidas.
 
 ---
 
 ## 📜 Licencia
-Este código fuente es de uso privado y exclusivo para **Corporación Interoceánica JJJA S.R.L.**
+
+Uso privado y exclusivo para **Estudio Jurídico Contable El Asesor SAC**.
 
 ---
-*Diseñado y desarrollado con ❤️ enfocados en la excelencia operativa.*
+
+*Desarrollado con ❤️ — Sistemas Distribuidos 2026*

@@ -110,24 +110,22 @@ const Dashboard = () => {
   }, [sedes, cajas, usuario.rol, fechaSeleccionada, resumenDiario]);
 
   const renderCalendario = () => {
-    // Usar la fechaSeleccionada para el calendario o la actual si no hay seleccionada
     const fBase = fechaSeleccionada ? new Date(fechaSeleccionada + 'T12:00:00') : new Date();
     const anio = fBase.getFullYear();
     const mes = fBase.getMonth();
     const primerDia = new Date(anio, mes, 1).getDay();
     const diasEnMes = new Date(anio, mes + 1, 0).getDate();
-    
+
     const dias = [];
     const startOffset = primerDia === 0 ? 6 : primerDia - 1;
-    
     for (let i = 0; i < startOffset; i++) dias.push(null);
     for (let i = 1; i <= diasEnMes; i++) dias.push(i);
 
     return (
       <div className="w-full">
         <div className="grid grid-cols-7 gap-1 mb-2">
-          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((d, i) => (
-            <div key={`dow-${i}`} className="text-[8px] font-black text-[var(--c-texto-sub)] text-center py-1 uppercase">{d === 'X' ? 'M' : d}</div>
+          {['L', 'M', 'M', 'J', 'V', 'S', 'D'].map((d, i) => (
+            <div key={`dow-${i}`} className="text-[8px] font-black text-[var(--c-texto-sub)] text-center py-1 uppercase">{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7 gap-1">
@@ -137,7 +135,6 @@ const Dashboard = () => {
             const isSel = fechaSeleccionada === f;
             const isToday = new Date().getDate() === d && new Date().getMonth() === mes;
             const hasData = resumenDiario[f]?.ingresos > 0 || resumenDiario[f]?.egresos > 0;
-
             return (
               <button
                 key={i}

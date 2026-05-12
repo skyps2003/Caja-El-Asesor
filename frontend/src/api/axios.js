@@ -18,9 +18,12 @@ API.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('usuario');
-      window.location.href = '/login';
+      // Evitar la redirección si el error 401 proviene del endpoint de login (credenciales inválidas)
+      if (error.config && !error.config.url.includes('/auth/login')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('usuario');
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }

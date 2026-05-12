@@ -4,6 +4,7 @@ import API from '../api/axios';
 import Loader from '../components/Loader';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import toast from 'react-hot-toast';
 
 const formatSol = (n = 0) => `S/ ${Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
 const formatFecha = (f) => new Date(f).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
@@ -126,7 +127,6 @@ const Cierres = () => {
   const [cargandoPrev, setCargandoPrev] = useState(false);
   const [cargandoPDF, setCargandoPDF] = useState('');
   const [exportandoExcel, setExportandoExcel] = useState(false);
-  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [cajas, setCajas] = useState([]);
 
   const [formData, setFormData] = useState({
@@ -180,19 +180,18 @@ const Cierres = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setCargandoForm(true);
-    setMensaje({ tipo: '', texto: '' });
     try {
       const { data } = await API.post('/cierres', {
         tipo: formData.tipo,
         saldo_real: parseFloat(formData.saldo_real),
         observaciones: formData.observaciones,
       });
-      setMensaje({ tipo: 'exito', texto: data.mensaje });
+      toast.success(data.mensaje);
       setFormData({ tipo: 'DIARIO', saldo_real: '', observaciones: '' });
       cargarDatos();
       cargarPrevisualizacion();
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: err.response?.data?.mensaje || 'Error al registrar el cierre' });
+      toast.error(err.response?.data?.mensaje || 'Error al registrar el cierre');
     } finally {
       setCargandoForm(false);
     }
@@ -209,12 +208,12 @@ const Cierres = () => {
 
       const { data } = await API.get(`/cierres/movimientos-periodo?tipo=${tipoPeriodo}&fecha=${fechaParam}`);
       if (!data.movimientos || data.movimientos.length === 0) {
-        setMensaje({ tipo: 'error', texto: `No hay movimientos ${tipoPeriodo === 'DIARIO' ? 'de hoy' : 'de este mes'} para generar el PDF.` });
+        toast.error(`No hay movimientos ${tipoPeriodo === 'DIARIO' ? 'de hoy' : 'de este mes'} para generar el PDF.`);
         return;
       }
       generarPDF(data, tipoPeriodo, nombreSede);
     } catch (err) {
-      setMensaje({ tipo: 'error', texto: 'Error al generar el PDF: ' + (err.response?.data?.mensaje || err.message) });
+      toast.error('Error al generar el PDF: ' + (err.response?.data?.mensaje || err.message));
     } finally {
       setCargandoPDF('');
     }
@@ -222,7 +221,7 @@ const Cierres = () => {
 
   const handleExportExcel = async () => {
     if (cajas.length === 0) {
-      setMensaje({ tipo: 'error', texto: 'No se encontraron cajas vinculadas a esta sede para generar el reporte.' });
+      toast.error('No se encontraron cajas vinculadas a esta sede para generar el reporte.');
       return;
     }
 
@@ -247,7 +246,7 @@ const Cierres = () => {
       link.remove();
     } catch (error) {
       console.error('Error al exportar Excel:', error);
-      setMensaje({ tipo: 'error', texto: 'Error al generar el reporte Excel consolidado.' });
+      toast.error('Error al generar el reporte Excel consolidado.');
     } finally {
       setExportandoExcel(false);
     }
@@ -312,28 +311,6 @@ const Cierres = () => {
               </button>
             </div>
           </div>
-
-          {/* Mensaje */}
-          {mensaje.texto && (
-            <div className={`mb-10 p-5 rounded-2xl flex items-center gap-4 animate-slideIn ${
-              mensaje.tipo === 'exito' ? 'bg-[var(--c-success-pastel)] border border-green-100 text-green-800' : 'bg-[var(--c-danger-pastel)] border border-red-100 text-red-800'
-            }`}>
-              <div className={`p-2.5 rounded-xl ${mensaje.tipo === 'exito' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                {mensaje.tipo === 'exito' ? (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                ) : (
-                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                )}
-              </div>
-              <div className="flex-1">
-                <p className="text-xs font-black uppercase tracking-widest mb-0.5">{mensaje.tipo === 'exito' ? 'Proceso Completado' : 'Notificación de Error'}</p>
-                <p className="text-sm font-medium opacity-90">{mensaje.texto}</p>
-              </div>
-              <button onClick={() => setMensaje({ tipo: '', texto: '' })} className="p-1.5 hover:bg-black/5 rounded-lg transition-colors">
-                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-          )}
 
           <div className="grid grid-cols-1 xl:grid-cols-5 gap-6 mb-10">
 

@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
 import Loader from '../components/Loader';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import toast from 'react-hot-toast';
 
 // Icons
 const UsersIcon = () => (
@@ -146,19 +147,21 @@ const AdminDashboard = () => {
       await API[method](url, payload);
       await cargarDatos();
       handleCloseModal();
+      toast.success(isEditing ? 'Registro actualizado con éxito' : 'Registro creado con éxito');
     } catch (error) {
       console.error('Error al guardar', error);
-      alert('Error al guardar, verifique los datos');
+      toast.error('Error al guardar, verifique los datos');
     }
   };
 
   const handleAprobarMovimiento = async (id) => {
     try {
       await API.put(`/movimientos/${id}/estado`, { estado_comprobante: 'ASIGNADO', estado_sustento: 'APROBADO' });
+      toast.success('Movimiento aprobado correctamente');
       await cargarDatos();
     } catch (error) {
       console.error('Error al aprobar movimiento', error);
-      alert('Error al aprobar movimiento');
+      toast.error('Error al aprobar movimiento');
     }
   };
 
@@ -167,10 +170,11 @@ const AdminDashboard = () => {
     if (motivo) {
       try {
         await API.put(`/movimientos/${id}/estado`, { estado_comprobante: 'RECHAZADO', motivo_rechazo: motivo });
+        toast.success('Movimiento rechazado');
         await cargarDatos();
       } catch (error) {
         console.error('Error al rechazar movimiento', error);
-        alert('Error al rechazar movimiento');
+        toast.error('Error al rechazar movimiento');
       }
     }
   };
@@ -180,11 +184,12 @@ const AdminDashboard = () => {
     const { type, id } = modalEliminar;
     try {
       await API.delete(`/${type}s/${id}`);
+      toast.success('Registro eliminado con éxito');
       await cargarDatos();
       setModalEliminar({ isOpen: false, type: null, id: null });
     } catch (error) {
       console.error('Error al eliminar', error);
-      alert('Error al eliminar');
+      toast.error('Error al eliminar');
       setModalEliminar({ isOpen: false, type: null, id: null });
     }
   };

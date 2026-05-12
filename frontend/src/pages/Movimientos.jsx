@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import API from '../api/axios';
+import toast from 'react-hot-toast';
 
 const formatSol = (n) =>
   `S/ ${Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
@@ -15,7 +16,6 @@ const Movimientos = () => {
   const [movimientos, setMovimientos] = useState([]);
   const [cargandoForm, setCargandoForm] = useState(false);
   const [cargandoData, setCargandoData] = useState(true);
-  const [mensaje, setMensaje] = useState({ tipo: '', texto: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [cajaFilter, setCajaFilter] = useState('');
 
@@ -62,12 +62,35 @@ const Movimientos = () => {
       setFormData((p) => ({ ...p, tipo: value === '1' }));
       return;
     }
+    // RUC: solo números, máx 11 dígitos
+    if (name === 'ruc') {
+      const soloNum = value.replace(/\D/g, '').slice(0, 11);
+      setFormData((p) => ({ ...p, ruc: soloNum }));
+      return;
+    }
+    // Nº correlativo Factura: forzar mayúsculas
+    if (name === 'numero_comprobante') {
+      setFormData((p) => ({ ...p, numero_comprobante: value.toUpperCase() }));
+      return;
+    }
     setFormData((p) => ({ ...p, [name]: type === 'checkbox' ? checked : value }));
   };
 
+  // Validaciones en tiempo real
+  const regexFactura = /^F[A-Z0-9]{3}-\d{1,8}$/;   // F001-000001
+  const regexRecibo  = /^[A-Z]\d+$/;                // Una letra + solo números (ej: A0001, R12345)
+  const regexRUC     = /^(10|15|17|20)\d{9}$/;
+
+  const numComprobanteValido =
+    formData.tipo_comprobante === 'FACTURA' ? regexFactura.test(formData.numero_comprobante) :
+    formData.tipo_comprobante === 'RECIBO'  ? regexRecibo.test(formData.numero_comprobante) : true;
+
+  const rucValido = formData.tipo_comprobante === 'FACTURA'
+    ? regexRUC.test(formData.ruc)
+    : true;  // Recibo no requiere RUC
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMensaje({ tipo: '', texto: '' });
     setCargandoForm(true);
     try {
       const payload = {
@@ -85,10 +108,7 @@ const Movimientos = () => {
 
       const { data } = await API.post('/movimientos', payload);
       
-      setMensaje({
-        tipo: 'exito',
-        texto: `Movimiento registrado exitosamente. Saldo resultante: ${formatSol(data.movimiento.saldo_resultante)}`,
-      });
+      toast.success(`Movimiento registrado exitosamente. Saldo resultante: ${formatSol(data.movimiento.saldo_resultante)}`);
 
       setFormData({
         id_caja: formData.id_caja, // Mantener la caja seleccionada
@@ -104,10 +124,7 @@ const Movimientos = () => {
 
       cargarDatos();
     } catch (error) {
-      setMensaje({
-        tipo: 'error',
-        texto: error.response?.data?.mensaje || 'Error al registrar el movimiento',
-      });
+      toast.error(error.response?.data?.mensaje || 'Error al registrar el movimiento');
     } finally {
       setCargandoForm(false);
     }
@@ -151,24 +168,6 @@ const Movimientos = () => {
                 </span>
                 Nuevo Registro
               </h2>
-
-              {mensaje.texto && (
-                <div className={`mb-8 p-4 rounded-2xl flex items-center gap-3 animate-slideIn ${
-                  mensaje.tipo === 'exito' ? 'bg-[var(--c-success-pastel)] border border-green-200 text-green-800' : 'bg-[var(--c-danger-pastel)] border border-red-200 text-red-800'
-                }`}>
-                  <div className={`p-2 rounded-full ${mensaje.tipo === 'exito' ? 'bg-green-500/10' : 'bg-red-500/10'}`}>
-                    {mensaje.tipo === 'exito' ? (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>
-                    ) : (
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M6 18L18 6M6 6l12 12" /></svg>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-xs font-bold uppercase tracking-wider">{mensaje.tipo === 'exito' ? 'Operación Exitosa' : 'Error en Registro'}</p>
-                    <p className="text-sm font-medium opacity-90">{mensaje.texto}</p>
-                  </div>
-                </div>
-              )}
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid grid-cols-2 gap-8">
@@ -272,49 +271,112 @@ const Movimientos = () => {
                     <div className="flex items-center gap-3 mb-2">
                        <div className="w-1 h-4 bg-[var(--c-accion)] rounded-full"></div>
                        <h4 className="text-sm font-bold text-[var(--c-primario)] uppercase tracking-wider">Detalles del Comprobante</h4>
+                       <span className="ml-auto text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full"
+                         style={{ background: formData.tipo_comprobante === 'FACTURA' ? '#EEF2FF' : '#F0FDF4', color: formData.tipo_comprobante === 'FACTURA' ? '#3B59DA' : '#16A34A' }}
+                       >
+                         {formData.tipo_comprobante === 'FACTURA' ? 'Serie F — SUNAT' : 'Letra + Números'}
+                       </span>
                     </div>
-                    <div className="grid grid-cols-3 gap-6">
-                      <div className="col-span-1">
-                        <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mb-2 ml-1">Nº correlativo</label>
+
+                    {/* Nº Correlativo — siempre visible */}
+                    <div className="space-y-2">
+                      <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mb-1 ml-1">
+                        Nº Correlativo
+                        <span className="ml-2 opacity-50 normal-case font-normal">
+                          {formData.tipo_comprobante === 'FACTURA' ? 'Ej: F001-000123' : 'Ej: A0001 ó R12345'}
+                        </span>
+                      </label>
+                      <div className="relative">
                         <input
                           type="text"
                           name="numero_comprobante"
                           value={formData.numero_comprobante}
                           onChange={handleChange}
                           required
-                          placeholder={formData.tipo_comprobante === 'FACTURA' ? 'F001-000' : '0001'}
-                          className="premium-input !bg-[var(--c-fondo-card)]"
+                          placeholder={formData.tipo_comprobante === 'FACTURA' ? 'F001-000001' : 'A0001'}
+                          maxLength={formData.tipo_comprobante === 'FACTURA' ? 13 : 20}
+                          className={`premium-input !bg-[var(--c-fondo-card)] font-mono ${
+                            formData.numero_comprobante && !numComprobanteValido
+                              ? 'border-red-400 focus:border-red-500'
+                              : formData.numero_comprobante && numComprobanteValido
+                              ? 'border-green-400 focus:border-green-500'
+                              : ''
+                          }`}
                         />
+                        {formData.numero_comprobante && (
+                          <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black ${
+                            numComprobanteValido ? 'text-green-500' : 'text-red-500'
+                          }`}>
+                            {numComprobanteValido ? '✓ válido' : '✗ incorrecto'}
+                          </span>
+                        )}
                       </div>
-                      {formData.tipo_comprobante === 'FACTURA' && (
-                        <>
-                          <div className="col-span-1">
-                            <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mb-2 ml-1">RUC Emisor</label>
+                      {formData.numero_comprobante && !numComprobanteValido && (
+                        <p className="text-[9px] text-red-500 font-bold ml-1">
+                          {formData.tipo_comprobante === 'FACTURA'
+                            ? 'Formato: F seguido de 3 caracteres, guión y hasta 8 dígitos (Ej: F001-000001)'
+                            : 'Formato: 1 letra mayúscula seguida de números (Ej: A0001, R12345)'}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* RUC + Razón Social — SOLO para Factura */}
+                    {formData.tipo_comprobante === 'FACTURA' && (
+                      <div className="grid grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mb-1 ml-1">
+                            RUC Emisor <span className="text-red-400">*</span>
+                          </label>
+                          <div className="relative">
                             <input
                               type="text"
                               name="ruc"
                               value={formData.ruc}
                               onChange={handleChange}
                               required
-                              placeholder="20XXXXXXXXX"
-                              className="premium-input !bg-[var(--c-fondo-card)]"
+                              placeholder="20123456789"
+                              maxLength={11}
+                              inputMode="numeric"
+                              className={`premium-input !bg-[var(--c-fondo-card)] font-mono ${
+                                formData.ruc && !rucValido
+                                  ? 'border-red-400 focus:border-red-500'
+                                  : formData.ruc && rucValido
+                                  ? 'border-green-400 focus:border-green-500'
+                                  : ''
+                              }`}
                             />
+                            {formData.ruc && (
+                              <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black ${
+                                rucValido ? 'text-green-500' : 'text-red-500'
+                              }`}>
+                                {rucValido ? '✓' : '✗'}
+                              </span>
+                            )}
                           </div>
-                          <div className="col-span-1">
-                            <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mb-2 ml-1">Razón Social</label>
-                            <input
-                              type="text"
-                              name="razon_social"
-                              value={formData.razon_social}
-                              onChange={handleChange}
-                              required
-                              placeholder="Nombre Comercial"
-                              className="premium-input !bg-[var(--c-fondo-card)]"
-                            />
-                          </div>
-                        </>
-                      )}
-                    </div>
+                          {formData.ruc && !rucValido && (
+                            <p className="text-[9px] text-red-500 font-bold ml-1">RUC inválido (11 dígitos, empieza con 10, 15, 17 o 20)</p>
+                          )}
+                          {formData.ruc.length > 0 && (
+                            <p className="text-[9px] text-[var(--c-texto-sub)] ml-1 opacity-60">{formData.ruc.length}/11 dígitos</p>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mb-1 ml-1">
+                            Razón Social <span className="text-red-400">*</span>
+                          </label>
+                          <input
+                            type="text"
+                            name="razon_social"
+                            value={formData.razon_social}
+                            onChange={handleChange}
+                            required
+                            placeholder="Nombre o Razón Social del Emisor"
+                            className="premium-input !bg-[var(--c-fondo-card)]"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
