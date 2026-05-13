@@ -35,6 +35,8 @@ const Movimientos = () => {
     observaciones: '',
   });
 
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+
   const cargarDatos = async () => {
     try {
       const cajasUrl =
@@ -114,9 +116,14 @@ const Movimientos = () => {
     ? regexRUC.test(formData.ruc)
     : true;  // Recibo no requiere RUC
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault();
+    setShowConfirmModal(true);
+  };
+
+  const confirmarRegistro = async () => {
     setCargandoForm(true);
+    setShowConfirmModal(false);
     try {
       const payload = {
         id_caja: formData.id_caja,
@@ -174,6 +181,59 @@ const Movimientos = () => {
   return (
     <div className="min-h-screen bg-fondo animate-fade-in">
       <div className="max-w-7xl mx-auto px-4 py-10">
+
+        {/* Modal de Confirmación */}
+        {showConfirmModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-[var(--c-fondo-card)] w-full max-w-md rounded-[24px] shadow-2xl border border-[var(--c-borde)] overflow-hidden animate-slide-up">
+              <div className="p-8 text-center">
+                <div className="w-16 h-16 bg-[var(--c-accion-pastel)] text-[var(--c-accion)] rounded-full flex items-center justify-center mx-auto mb-6">
+                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-black text-[var(--c-primario)] mb-2 uppercase tracking-tight">¿Confirmar Movimiento?</h3>
+                <p className="text-xs text-[var(--c-texto-sub)] font-medium mb-8 uppercase tracking-widest">Verifica los datos antes de proceder</p>
+                
+                <div className="bg-[var(--c-secundario)] rounded-2xl p-6 space-y-4 mb-8 text-left border border-[var(--c-borde)]">
+                  <div className="flex justify-between items-center pb-3 border-b border-[var(--c-borde)]/60">
+                    <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Fecha de Registro</span>
+                    <span className="text-xs font-black text-[var(--c-primario)]">{new Date(formData.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-[var(--c-borde)]/60">
+                    <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Caja / Cuenta</span>
+                    <span className="text-xs font-black text-[var(--c-primario)]">{cajaSeleccionada?.nombre_caja}</span>
+                  </div>
+                  <div className="flex justify-between items-center pb-3 border-b border-[var(--c-borde)]/60">
+                    <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Operación</span>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-md font-black uppercase ${formData.tipo ? 'bg-red-100 text-red-600' : 'bg-emerald-100 text-emerald-600'}`}>
+                      {formData.tipo ? 'EGRESO' : 'INGRESO'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Monto Total</span>
+                    <span className={`text-lg font-black ${formData.tipo ? 'text-[var(--c-salida)]' : 'text-[var(--c-entrada)]'}`}>{formatSol(formData.monto)}</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="py-3.5 px-6 rounded-xl text-xs font-black uppercase tracking-widest border border-[var(--c-borde)] text-[var(--c-texto-sub)] hover:bg-[var(--c-secundario)] transition-all"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={confirmarRegistro}
+                    className="py-3.5 px-6 rounded-xl text-xs font-black uppercase tracking-widest bg-[var(--c-accion)] text-white shadow-lg shadow-[var(--c-accion)]/20 hover:bg-[var(--c-accion-hover)] transition-all"
+                  >
+                    Sí, Guardar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Header Section */}
         <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
