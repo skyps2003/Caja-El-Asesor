@@ -30,7 +30,7 @@ const { verificarToken, verificarRol } = require('../middlewares/auth.middleware
 router.post('/', verificarToken, verificarRol('ADMINISTRADOR'), crearUsuario);
 router.get('/', verificarToken, obtenerUsuarios);
 router.get('/:id', verificarToken, obtenerUsuarioPorId);
-router.put('/:id', verificarToken, verificarRol('ADMINISTRADOR'), actualizarUsuario);
+router.put('/:id', verificarToken, actualizarUsuario);
 router.delete('/:id', verificarToken, verificarRol('ADMINISTRADOR'), eliminarUsuario);
 
 // Ruta para subir la foto de perfil

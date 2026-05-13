@@ -55,6 +55,21 @@ const obtenerUsuarioPorId = async (req, res) => {
 const actualizarUsuario = async (req, res) => {
   try {
     const { password, passwordAntiguo, ...resto } = req.body;
+    const { id } = req.params;
+
+    // Verificar permisos: Admin puede todo, otros solo a sí mismos
+    if (req.usuario.rol !== 'ADMINISTRADOR' && req.usuario.id !== id) {
+      return res.status(403).json({ mensaje: 'No tienes permisos para actualizar este perfil' });
+    }
+
+    // Si no es admin, protegemos campos sensibles
+    if (req.usuario.rol !== 'ADMINISTRADOR') {
+      delete resto.rol;
+      delete resto.id_sede;
+      delete resto.estado;
+      delete resto.login_usuario; // No permitimos cambiar el login a cajeros por seguridad
+    }
+
     let datosActualizar = { ...resto };
 
     if (password) {
@@ -62,7 +77,7 @@ const actualizarUsuario = async (req, res) => {
         return res.status(400).json({ mensaje: 'Debe proporcionar la contraseña actual para cambiarla' });
       }
 
-      const usuarioDb = await Usuario.findById(req.params.id);
+      const usuarioDb = await Usuario.findById(id);
       if (!usuarioDb) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
 
       const esValida = await bcrypt.compare(passwordAntiguo, usuarioDb.password);
@@ -74,12 +89,15 @@ const actualizarUsuario = async (req, res) => {
       datosActualizar.password = await bcrypt.hash(password, salt);
     }
 
-    const usuario = await Usuario.findByIdAndUpdate(req.params.id, datosActualizar, { returnDocument: 'after' }).select('-password');
+    const usuario = await Usuario.findByIdAndUpdate(id, datosActualizar, { returnDocument: 'after' })
+      .select('-password')
+      .populate('id_sede', 'nombre');
+
     if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
     
-    res.json({ mensaje: 'Usuario actualizado exitosamente', usuario });
+    res.json({ mensaje: 'Perfil actualizado exitosamente', usuario });
   } catch (error) {
-    res.status(500).json({ mensaje: 'Error al actualizar usuario', error: error.message });
+    res.status(500).json({ mensaje: 'Error al actualizar perfil', error: error.message });
   }
 };
 
@@ -106,9 +124,16 @@ const actualizarAvatar = async (req, res) => {
       return res.status(400).json({ mensaje: 'No se subió ninguna imagen' });
     }
 
+    const { id } = req.params;
+
+    // Verificar permisos
+    if (req.usuario.rol !== 'ADMINISTRADOR' && req.usuario.id !== id) {
+      return res.status(403).json({ mensaje: 'No tienes permisos para actualizar este perfil' });
+    }
+
     const avatarUrl = `/uploads/${req.file.filename}`;
     const usuario = await Usuario.findByIdAndUpdate(
-      req.params.id,
+      id,
       { avatar: avatarUrl },
       { returnDocument: 'after' }
     ).select('-password');
