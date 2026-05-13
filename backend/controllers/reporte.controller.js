@@ -57,20 +57,20 @@ const generarReporteMensual = async (req, res) => {
     const fillBlue = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } }; // Azul suave
     const fontPrimary = { name: 'Arial', size: 9 };
     
-    // 1. Listado de Tipos de Caja (A3:C8)
-    worksheet.mergeCells('A3:B3');
-    worksheet.getCell('A3').value = 'Liste los Tipos de Caja';
-    worksheet.getCell('A3').font = { italic: true, color: { argb: 'FFCC7A00' } };
+    // 1. Listado de Tipos de Caja (A7:B12)
+    worksheet.mergeCells('A7:B7');
+    worksheet.getCell('A7').value = 'Liste los Tipos de Caja';
+    worksheet.getCell('A7').font = { italic: true, color: { argb: 'FFCC7A00' } };
 
-    worksheet.getCell('A4').value = 'Nro.';
-    worksheet.getCell('B4').value = 'Tipo de Caja';
-    worksheet.getCell('A4').fill = fillHeader;
-    worksheet.getCell('B4').fill = fillHeader;
-    worksheet.getCell('A4').border = borderFull;
-    worksheet.getCell('B4').border = borderFull;
+    worksheet.getCell('A8').value = 'Nro.';
+    worksheet.getCell('B8').value = 'Tipo de Caja';
+    worksheet.getCell('A8').fill = fillHeader;
+    worksheet.getCell('B8').fill = fillHeader;
+    worksheet.getCell('A8').border = borderFull;
+    worksheet.getCell('B8').border = borderFull;
 
     todasLasCajas.forEach((c, i) => {
-      const row = 5 + i;
+      const row = 9 + i;
       worksheet.getCell(`A${row}`).value = c.codigo;
       worksheet.getCell(`B${row}`).value = c.nombre_caja;
       worksheet.getCell(`A${row}`).border = borderFull;
@@ -78,30 +78,30 @@ const generarReporteMensual = async (req, res) => {
       worksheet.getCell(`A${row}`).alignment = { horizontal: 'center' };
     });
 
-    // 2. Saldos a mantener (E3:H6)
-    worksheet.mergeCells('E3:H3');
-    worksheet.getCell('E3').value = 'Ingrese los saldos a mantener en caja';
-    worksheet.getCell('E3').font = { italic: true, color: { argb: 'FFCC7A00' } };
-    worksheet.getCell('E3').alignment = { horizontal: 'center' };
+    // 2. Saldos a mantener (E7:H10)
+    worksheet.mergeCells('E7:H7');
+    worksheet.getCell('E7').value = 'Ingrese los saldos a mantener en caja';
+    worksheet.getCell('E7').font = { italic: true, color: { argb: 'FFCC7A00' } };
+    worksheet.getCell('E7').alignment = { horizontal: 'center' };
 
-    worksheet.getCell('G4').value = 'Mínimo:';
-    worksheet.getCell('H4').value = 500;
-    worksheet.getCell('H4').numFmt = '"S/ " #,##0.00';
-    worksheet.getCell('G5').value = 'Máximo:';
-    worksheet.getCell('H5').value = 10000;
-    worksheet.getCell('H5').numFmt = '"S/ " #,##0.00';
+    worksheet.getCell('G8').value = 'Mínimo:';
+    worksheet.getCell('H8').value = 500;
+    worksheet.getCell('H8').numFmt = '"S/ " #,##0.00';
+    worksheet.getCell('G9').value = 'Máximo:';
+    worksheet.getCell('H9').value = 10000;
+    worksheet.getCell('H9').numFmt = '"S/ " #,##0.00';
     
-    worksheet.getCell('G4').fill = fillHeader;
-    worksheet.getCell('H4').fill = fillHeader;
-    worksheet.getCell('G5').fill = fillHeader;
-    worksheet.getCell('H5').fill = fillHeader;
-    worksheet.getCell('G4').font = { color: { argb: 'FF38761D' }, bold: true };
-    worksheet.getCell('G5').font = { color: { argb: 'FF38761D' }, bold: true };
+    worksheet.getCell('G8').fill = fillHeader;
+    worksheet.getCell('H8').fill = fillHeader;
+    worksheet.getCell('G9').fill = fillHeader;
+    worksheet.getCell('H9').fill = fillHeader;
+    worksheet.getCell('G8').font = { color: { argb: 'FF38761D' }, bold: true };
+    worksheet.getCell('G9').font = { color: { argb: 'FF38761D' }, bold: true };
 
-    // 3. Saldo Total y Mensaje (L4:M6)
+    // 3. Saldo Total y Mensaje (L8:P8)
     const saldoTotalSede = todasLasCajas.reduce((acc, curr) => acc + curr.saldo_actual, 0);
-    worksheet.mergeCells('L4:P4'); // Más largo para que se vea igual que el screenshot
-    const cellSaldo = worksheet.getCell('L4');
+    worksheet.mergeCells('L8:P8'); 
+    const cellSaldo = worksheet.getCell('L8');
     cellSaldo.value = `SALDO TOTAL DE CAJA        S/ ${saldoTotalSede.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
     cellSaldo.alignment = { horizontal: 'center', vertical: 'middle' };
     cellSaldo.font = { bold: true, color: { argb: 'FF38761D' }, size: 10 };
@@ -114,14 +114,14 @@ const generarReporteMensual = async (req, res) => {
       right: { style: 'thin', color: { argb: 'FFFF0000' } }
     };
 
-    // 4. Tabla de Movimientos (A12...)
-    worksheet.mergeCells('A12:D12');
-    worksheet.getCell('A12').value = 'Ingrese los movimientos de caja diarios';
-    worksheet.getCell('A12').font = { italic: true, color: { argb: 'FFCC7A00' } };
+    // 4. Tabla de Movimientos (A16...)
+    worksheet.mergeCells('A16:D16');
+    worksheet.getCell('A16').value = 'Ingrese los movimientos de caja diarios';
+    worksheet.getCell('A16').font = { italic: true, color: { argb: 'FFCC7A00' } };
 
     const headerPositions = [
       { col: 1, val: 'FECHA' },
-      { col: 2, val: 'CONCEPTO', merge: 'B13:D13' },
+      { col: 2, val: 'CONCEPTO', merge: 'B17:D17' },
       { col: 5, val: 'CÓDIGO' },
       { col: 6, val: 'N° RECIBO' },
       { col: 7, val: 'ENTRADAS' },
@@ -130,7 +130,7 @@ const generarReporteMensual = async (req, res) => {
     ];
 
     headerPositions.forEach((h) => {
-      const cell = worksheet.getCell(13, h.col);
+      const cell = worksheet.getCell(17, h.col);
       cell.value = h.val;
       cell.fill = fillHeader;
       cell.border = borderFull;
@@ -139,7 +139,7 @@ const generarReporteMensual = async (req, res) => {
       if (h.merge) worksheet.mergeCells(h.merge);
     });
 
-    let currentRow = 14;
+    let currentRow = 18;
     let saldoAcumulado = 0; // O tal vez el saldo inicial del periodo?
     
     movimientos.forEach((mov) => {
@@ -183,8 +183,8 @@ const generarReporteMensual = async (req, res) => {
       currentRow++;
     });
 
-    // 5. Tabla resumen por tipo (L7...)
-    let resRow = 7;
+    // 5. Tabla resumen por tipo (L11...)
+    let resRow = 11;
     worksheet.mergeCells(`M${resRow}:N${resRow}`);
     worksheet.getCell(`M${resRow}`).value = 'RESUMEN DE SALDOS POR CUENTA';
     worksheet.getCell(`M${resRow}`).fill = fillHeader;
