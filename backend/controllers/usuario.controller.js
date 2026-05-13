@@ -85,13 +85,15 @@ const actualizarUsuario = async (req, res) => {
 
 const eliminarUsuario = async (req, res) => {
   try {
-    // Evitar que un usuario se elimine a sí mismo
-    if (req.usuario.id === req.params.id) {
-      return res.status(400).json({ mensaje: 'No puedes eliminarte a ti mismo.' });
+    const usuarioAEliminar = await Usuario.findById(req.params.id);
+    if (!usuarioAEliminar) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+
+    // Restricción: No se pueden eliminar administradores
+    if (usuarioAEliminar.rol === 'ADMINISTRADOR') {
+      return res.status(400).json({ mensaje: 'No se permite eliminar usuarios con el nivel de acceso ADMINISTRADOR.' });
     }
 
-    const usuario = await Usuario.findByIdAndDelete(req.params.id);
-    if (!usuario) return res.status(404).json({ mensaje: 'Usuario no encontrado' });
+    await Usuario.findByIdAndDelete(req.params.id);
     res.json({ mensaje: 'Usuario eliminado correctamente' });
   } catch (error) {
     res.status(500).json({ mensaje: 'Error al eliminar usuario', error: error.message });

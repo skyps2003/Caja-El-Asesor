@@ -196,9 +196,11 @@ const Dashboard = () => {
           
           <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--c-texto-sub)] mb-2">Sedes Operativas</p>
-              <p className="text-4xl font-black font-heading text-[var(--c-primario)] tracking-tight">{sedes.length}</p>
-              <p className="mt-4 text-[11px] font-medium text-[var(--c-texto-sub)]">Distribución geográfica global</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--c-texto-sub)] mb-2">Saldo Neto Diario</p>
+              <p className={`text-4xl font-black font-heading tracking-tight ${((resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0)) >= 0 ? 'text-[var(--c-entrada)]' : 'text-[var(--c-salida)]'}`}>
+                {formatSol((resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0))}
+              </p>
+              <p className="mt-4 text-[11px] font-medium text-[var(--c-texto-sub)]">Balance de operaciones del día</p>
             </div>
           </div>
 

@@ -3,6 +3,15 @@ const Movimiento = require('../models/Movimiento');
 const Caja = require('../models/Caja');
 const Sede = require('../models/Sede');
 
+// ─── Helper: fecha local de Perú (UTC-5) como string YYYY-MM-DD ───────────────
+// Convierte la fecha UTC almacenada en MongoDB a la fecha real en Perú,
+// independientemente del timezone del servidor.
+const fechaPeruStr = (date) => {
+  const OFFSET_PERU_MS = -5 * 60 * 60 * 1000; // UTC-5 en milisegundos
+  const local = new Date(date.getTime() + OFFSET_PERU_MS);
+  return local.toISOString().split('T')[0]; // YYYY-MM-DD en hora local Peru
+};
+
 // ─── Helper: calcular ingresos/egresos de un array de movimientos ──────────
 const calcularTotales = (movimientos) => {
   let total_ingresos = 0;
@@ -73,7 +82,10 @@ exports.resumenDiario = async (req, res) => {
 
     const porDia = {};
     movimientos.forEach((mov) => {
-      const dia = mov.fecha_hora.toISOString().split('T')[0];
+      // fechaPeruStr aplica offset UTC-5 explícito: funciona aunque el servidor
+      // esté en UTC. Ej: 10:30 PM Peru = 03:30 AM UTC del día siguiente → sin
+      // este fix se agrupa en el día equivocado.
+      const dia = fechaPeruStr(mov.fecha_hora);
       if (!porDia[dia]) porDia[dia] = { fecha: dia, ingresos: 0, egresos: 0, movimientos: 0, detalle_cajas: {} };
       porDia[dia].movimientos++;
       

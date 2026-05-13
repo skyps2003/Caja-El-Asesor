@@ -4,6 +4,10 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const initCron = require('./services/cron');
+
+// Inicializar tareas automáticas (Cierre 23:59)
+initCron();
 
 // ── Middlewares ──────────────────────────────────────────────
 app.use(cors());

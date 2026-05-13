@@ -130,7 +130,7 @@ const Cierres = () => {
   const [cajas, setCajas] = useState([]);
 
   const [formData, setFormData] = useState({
-    tipo: 'DIARIO',
+    tipo: 'MENSUAL',
     saldo_real: '',
     observaciones: '',
   });
@@ -187,7 +187,7 @@ const Cierres = () => {
         observaciones: formData.observaciones,
       });
       toast.success(data.mensaje);
-      setFormData({ tipo: 'DIARIO', saldo_real: '', observaciones: '' });
+      setFormData({ tipo: 'MENSUAL', saldo_real: '', observaciones: '' });
       cargarDatos();
       cargarPrevisualizacion();
     } catch (err) {
@@ -388,26 +388,18 @@ const Cierres = () => {
                    <h2 className="text-sm font-black uppercase tracking-widest text-[var(--c-primario)]">Protocolo de Cierre</h2>
                 </div>
 
+                <div className="mb-6 p-4 bg-[var(--c-accion-pastel)] rounded-xl border border-[var(--c-accion)]/20 flex items-start gap-3">
+                  <svg className="w-5 h-5 text-[var(--c-accion)] mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  <p className="text-[11px] font-bold text-[var(--c-primario)] leading-relaxed">
+                    <span className="uppercase block mb-1">Cierre Automático Activo</span>
+                    El sistema ejecuta el cierre <span className="text-[var(--c-accion)]">DIARIO</span> de forma automática a las <span className="font-black">23:59</span> cada noche. Solo debe realizar cierres manuales para auditorías mensuales.
+                  </p>
+                </div>
+
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  <div>
-                    <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-wider mb-2 ml-1">Frecuencia del Cierre</label>
-                    <div className="flex bg-[var(--c-secundario)] p-1 rounded-xl border border-[var(--c-borde)]">
-                      <button
-                        type="button"
-                        onClick={() => setFormData(p => ({ ...p, tipo: 'DIARIO' }))}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${formData.tipo === 'DIARIO' ? 'bg-[var(--c-fondo-card)] shadow-sm text-[var(--c-primario)]' : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)]'}`}
-                      >
-                        DIARIO
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(p => ({ ...p, tipo: 'MENSUAL' }))}
-                        className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${formData.tipo === 'MENSUAL' ? 'bg-[var(--c-fondo-card)] shadow-sm text-[var(--c-primario)]' : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)]'}`}
-                      >
-                        MENSUAL
-                      </button>
-                    </div>
-                  </div>
+                  <input type="hidden" name="tipo" value={formData.tipo} />
                   <div>
                     <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-wider mb-2 ml-1">Efectivo en Bóveda (S/)</label>
                     <div className="relative">

@@ -195,9 +195,12 @@ const AdminDashboard = () => {
   };
 
   const handleDelete = (type, id) => {
-    if (type === 'usuario' && id === usuario._id) {
-      toast.error('No puedes eliminarte a ti mismo.');
-      return;
+    if (type === 'usuario') {
+      const targetUser = usuarios.find(u => u._id === id);
+      if (targetUser?.rol === 'ADMINISTRADOR') {
+        toast.error('No se permite eliminar usuarios con el nivel de acceso ADMINISTRADOR.');
+        return;
+      }
     }
     setModalEliminar({ isOpen: true, type, id });
   };

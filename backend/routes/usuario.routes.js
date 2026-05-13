@@ -25,13 +25,15 @@ const upload = multer({
   }
 });
 
-router.post('/', crearUsuario);
-router.get('/', obtenerUsuarios);
-router.get('/:id', obtenerUsuarioPorId);
-router.put('/:id', actualizarUsuario);
-router.delete('/:id', eliminarUsuario);
+const { verificarToken, verificarRol } = require('../middlewares/auth.middleware');
+
+router.post('/', verificarToken, verificarRol('ADMINISTRADOR'), crearUsuario);
+router.get('/', verificarToken, obtenerUsuarios);
+router.get('/:id', verificarToken, obtenerUsuarioPorId);
+router.put('/:id', verificarToken, verificarRol('ADMINISTRADOR'), actualizarUsuario);
+router.delete('/:id', verificarToken, verificarRol('ADMINISTRADOR'), eliminarUsuario);
 
 // Ruta para subir la foto de perfil
-router.post('/upload-avatar/:id', upload.single('foto'), actualizarAvatar);
+router.post('/upload-avatar/:id', verificarToken, upload.single('foto'), actualizarAvatar);
 
 module.exports = router;

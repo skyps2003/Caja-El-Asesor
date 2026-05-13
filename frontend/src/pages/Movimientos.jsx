@@ -11,11 +11,13 @@ const Movimientos = () => {
   const { usuario } = useAuth();
   const [searchParams] = useSearchParams();
   const cajaIdParam = searchParams.get('caja');
+  const TOKEN_RUC = import.meta.env.VITE_API_RUC_TOKEN;
 
   const [cajas, setCajas] = useState([]);
   const [movimientos, setMovimientos] = useState([]);
   const [cargandoForm, setCargandoForm] = useState(false);
   const [cargandoData, setCargandoData] = useState(true);
+  const [consultandoRuc, setConsultandoRuc] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [cajaFilter, setCajaFilter] = useState('');
 
@@ -56,16 +58,36 @@ const Movimientos = () => {
     return () => clearInterval(interval);
   }, [usuario]);
 
-  const handleChange = (e) => {
+  const handleChange = async (e) => {
     const { name, value, type, checked } = e.target;
     if (name === 'tipo') {
       setFormData((p) => ({ ...p, tipo: value === '1' }));
       return;
     }
-    // RUC: solo números, máx 11 dígitos
+    // RUC: solo números, máx 11 dígitos + consulta automática SUNAT
     if (name === 'ruc') {
       const soloNum = value.replace(/\D/g, '').slice(0, 11);
-      setFormData((p) => ({ ...p, ruc: soloNum }));
+      setFormData((p) => ({ ...p, ruc: soloNum, razon_social: '' }));
+
+      if (/^\d{11}$/.test(soloNum)) {
+        try {
+          setConsultandoRuc(true);
+          const response = await fetch(
+            `https://dniruc.apisperu.com/api/v1/ruc/${soloNum}?token=${TOKEN_RUC}`
+          );
+          const data = await response.json();
+          setFormData((p) => ({
+            ...p,
+            ruc: soloNum,
+            razon_social: data.razonSocial || '',
+          }));
+        } catch (error) {
+          console.error(error);
+          toast.error('Error consultando el RUC en SUNAT');
+        } finally {
+          setConsultandoRuc(false);
+        }
+      }
       return;
     }
     // Nº correlativo Factura: forzar mayúsculas
@@ -369,9 +391,13 @@ const Movimientos = () => {
                             type="text"
                             name="razon_social"
                             value={formData.razon_social}
-                            onChange={handleChange}
+                            readOnly
                             required
-                            placeholder="Nombre o Razón Social del Emisor"
+                            placeholder={
+                              consultandoRuc
+                                ? 'Consultando SUNAT...'
+                                : 'Razón social automática'
+                            }
                             className="premium-input !bg-[var(--c-fondo-card)]"
                           />
                         </div>
@@ -537,12 +563,12 @@ const Movimientos = () => {
             <table className="premium-table">
               <thead>
                 <tr>
-                  <th>Fecha / Hora</th>
+                  <th>Fecha / Hora ↑</th>
                   <th>Caja</th>
                   <th>Tipo</th>
                   <th>Concepto</th>
                   <th className="text-right">Monto</th>
-                  <th className="text-right">Saldo Final</th>
+                  <th className="text-right">Saldo Resultante</th>
                   <th>Comprobante</th>
                 </tr>
               </thead>
@@ -552,7 +578,7 @@ const Movimientos = () => {
                                       m.id_caja?.codigo?.toLowerCase().includes(searchTerm.toLowerCase());
                   const matchCaja = cajaFilter ? m.id_caja?._id === cajaFilter : true;
                   return matchSearch && matchCaja;
-                }).slice(0, 20).map(mov => {
+                }).slice(0, 20).reverse().map(mov => {
                   const cajaData = cajas.find(c => c._id === (mov.id_caja?._id || mov.id_caja));
                   const colorCaja = cajaData?.color_primario || mov.id_caja?.color_primario || '#3B59DA';
                   
