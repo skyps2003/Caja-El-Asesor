@@ -75,6 +75,11 @@ const MovimientoSchema = new mongoose.Schema(
       trim: true,
       default: '',
     },
+    entidad_comprobante: {
+      type: String,
+      trim: true,
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -184,6 +184,11 @@ h4,
   font-size: 0.925rem;
   transition: all 0.2s ease;
   outline: none;
+  color-scheme: light; /* Forzar modo claro por defecto */
+}
+
+html.dark .premium-input {
+  color-scheme: dark; /* Forzar modo oscuro solo cuando la app esté en dark mode */
 }
 
 .premium-input:focus {
@@ -445,6 +450,10 @@ select option {
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--c-accion);
 }
+
+/* ══════════════════════════════════════════════
+   DATEPICKER & VOUCHER PREMIUM STYLES
+   ══════════════════════════════════════════════ */
 
 /* ══════════════════════════════════════════════
    VIEW TRANSITIONS API — Theme Toggle Animation

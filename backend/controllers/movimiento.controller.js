@@ -24,6 +24,8 @@ const crearMovimiento = async (req, res) => {
       ruc,
       razon_social,
       observaciones,
+      entidad_comprobante,
+      fecha_hora,
     } = req.body;
 
     // ── 1. Obtener la caja dentro de la transaccion ──────────
@@ -76,7 +78,7 @@ const crearMovimiento = async (req, res) => {
 
     // ── 5. Crear el movimiento dentro de la transaccion ──────
     const nuevoMovimiento = new Movimiento({
-      fecha_hora: new Date(),
+      fecha_hora: fecha_hora ? new Date(fecha_hora) : new Date(),
       id_caja,
       id_usuario,
       tipo,
@@ -89,6 +91,7 @@ const crearMovimiento = async (req, res) => {
       razon_social: razon_social || null,
       estado_comprobante,
       observaciones,
+      entidad_comprobante: entidad_comprobante || null,
     });
 
     await nuevoMovimiento.save({ session });

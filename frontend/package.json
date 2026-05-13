@@ -12,6 +12,7 @@
   "dependencies": {
     "axios": "^1.15.2",
     "cally": "^0.9.2",
+    "flowbite-react": "^0.12.17",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "react": "^19.2.5",

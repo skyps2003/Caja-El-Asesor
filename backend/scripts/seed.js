@@ -10,31 +10,19 @@
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const Sede    = require('../models/Sede');
-const Caja    = require('../models/Caja');
+const Sede = require('../models/Sede');
+const Caja = require('../models/Caja');
 const Usuario = require('../models/Usuario');
-const bcrypt  = require('bcryptjs');
+const bcrypt = require('bcryptjs');
 
 // ── Datos ──────────────────────────────────────────────────────────────────
 
-const sedesIniciales = [
-  { nombre: 'Principal Abancay',  direccion: 'Abancay Centro' },
-  { nombre: 'Chalhuahuacho',      direccion: 'Chalhuahuacho Centro' },
-];
-
-const cajasIniciales = [
-  { codigo: '001', nombre_caja: 'Efectivo',           saldo_minimo: 0, saldo_maximo: 50000  },
-  { codigo: '002', nombre_caja: 'Banco Continental',  saldo_minimo: 0, saldo_maximo: 100000 },
-  { codigo: '003', nombre_caja: 'Interbank',          saldo_minimo: 0, saldo_maximo: 100000 },
-  { codigo: '004', nombre_caja: 'Banco de la Nación', saldo_minimo: 0, saldo_maximo: 100000 },
-  { codigo: '005', nombre_caja: 'Banco de Crédito',   saldo_minimo: 0, saldo_maximo: 100000 },
-];
 
 const ADMIN = {
-  nombre:        'Administrador Principal',
+  nombre: 'Administrador Principal',
   login_usuario: 'admin',
-  password:      'ADMI 1234',
-  rol:           'ADMINISTRADOR',
+  password: 'ADMI1234',
+  rol: 'ADMINISTRADOR',
 };
 
 // ── Seed ───────────────────────────────────────────────────────────────────
@@ -81,12 +69,12 @@ const seedData = async () => {
     } else {
       const hash = await bcrypt.hash(ADMIN.password, 10);
       const admin = await Usuario.create({
-        nombre:        ADMIN.nombre,
+        nombre: ADMIN.nombre,
         login_usuario: ADMIN.login_usuario,
-        password:      hash,
-        rol:           ADMIN.rol,
-        id_sede:       sedePrincipal._id,
-        estado:        true,
+        password: hash,
+        rol: ADMIN.rol,
+        id_sede: sedePrincipal._id,
+        estado: true,
       });
       console.log(`  ✚ Admin creado:`);
       console.log(`    👤 Nombre:   ${admin.nombre}`);
