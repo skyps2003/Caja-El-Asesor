@@ -35,7 +35,7 @@ const generarReporteMensual = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Reporte Diario');
 
-    // --- AGREGAR LOGO (En 4 celdas aprox A1:B2) ---
+    // --- AGREGAR LOGO (En 4 celdas aprox A1:D6) ---
     const logoPath = path.join(__dirname, '../../frontend/public/Logo para claro.png');
     if (fs.existsSync(logoPath)) {
       const logoId = workbook.addImage({
@@ -43,8 +43,8 @@ const generarReporteMensual = async (req, res) => {
         extension: 'png',
       });
       worksheet.addImage(logoId, {
-        tl: { col: 0, row: 0 },
-        br: { col: 2, row: 2 } // Cubre A1, A2, B1, B2
+        tl: { col: 0.1, row: 0.1 },
+        br: { col: 4.5, row: 6 } // Aproximadamente A1:E6
       });
     }
 
@@ -53,8 +53,9 @@ const generarReporteMensual = async (req, res) => {
       top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }
     };
     const fillHeader = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFE599' } }; // Amarillo suave
-    const fillGreen = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6E0B4' } }; // Verde suave
+    const fillGreen = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFC6E0B4' } }; // Verde suave (Saldo)
     const fillBlue = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDDEBF7' } }; // Azul suave
+    const fontPrimary = { name: 'Arial', size: 9 };
     
     // 1. Listado de Tipos de Caja (A3:C8)
     worksheet.mergeCells('A3:B3');
@@ -99,18 +100,19 @@ const generarReporteMensual = async (req, res) => {
 
     // 3. Saldo Total y Mensaje (L4:M6)
     const saldoTotalSede = todasLasCajas.reduce((acc, curr) => acc + curr.saldo_actual, 0);
-    worksheet.mergeCells('L4:N4');
-    worksheet.getCell('L4').value = `SALDO TOTAL DE CAJA        S/ ${saldoTotalSede.toFixed(2)}`;
-    worksheet.getCell('L4').alignment = { horizontal: 'center' };
-    worksheet.getCell('L4').border = { bottom: { style: 'thin', color: { argb: 'FFFF0000' } }, top: { style: 'thin', color: { argb: 'FFFF0000' } }, left: { style: 'thin', color: { argb: 'FFFF0000' } }, right: { style: 'thin', color: { argb: 'FFFF0000' } } };
-    worksheet.getCell('L4').font = { bold: true, color: { argb: 'FF38761D' } };
-
-    if (saldoTotalSede < 500) {
-      worksheet.mergeCells('L5:N5');
-      worksheet.getCell('L5').value = `La caja es inferior a su mínimo tolerable en un monto equivalente a ${500 - saldoTotalSede}`;
-      worksheet.getCell('L5').font = { italic: true, size: 10 };
-      worksheet.getCell('L5').alignment = { horizontal: 'center' };
-    }
+    worksheet.mergeCells('L4:P4'); // Más largo para que se vea igual que el screenshot
+    const cellSaldo = worksheet.getCell('L4');
+    cellSaldo.value = `SALDO TOTAL DE CAJA        S/ ${saldoTotalSede.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+    cellSaldo.alignment = { horizontal: 'center', vertical: 'middle' };
+    cellSaldo.font = { bold: true, color: { argb: 'FF38761D' }, size: 10 };
+    
+    // Borde rojo grueso como en la imagen
+    cellSaldo.border = {
+      top: { style: 'thin', color: { argb: 'FFFF0000' } },
+      left: { style: 'thin', color: { argb: 'FFFF0000' } },
+      bottom: { style: 'thin', color: { argb: 'FFFF0000' } },
+      right: { style: 'thin', color: { argb: 'FFFF0000' } }
+    };
 
     // 4. Tabla de Movimientos (A12...)
     worksheet.mergeCells('A12:D12');
@@ -123,8 +125,8 @@ const generarReporteMensual = async (req, res) => {
       cell.value = h;
       cell.fill = fillHeader;
       cell.border = borderFull;
-      cell.font = { bold: true, color: { argb: 'FF38761D' } };
-      cell.alignment = { horizontal: 'center' };
+      cell.font = { bold: true, color: { argb: 'FF7F6000' }, size: 9 }; // Marrón/Dorado oscuro
+      cell.alignment = { horizontal: 'center', vertical: 'middle' };
     });
 
     let currentRow = 14;
