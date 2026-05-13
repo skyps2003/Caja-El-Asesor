@@ -125,13 +125,18 @@ const Movimientos = () => {
     setCargandoForm(true);
     setShowConfirmModal(false);
     try {
+      // Asegurar que la fecha se envíe con una hora neutral (mediodía) 
+      // para evitar saltos de día por zona horaria en el backend
+      const [year, month, day] = formData.fecha.split('-').map(Number);
+      const fechaParaBackend = new Date(year, month - 1, day, 12, 0, 0);
+
       const payload = {
         id_caja: formData.id_caja,
         id_usuario: usuario._id,
         tipo: formData.tipo,
         concepto: formData.concepto,
         monto: parseFloat(formData.monto),
-        fecha_hora: formData.fecha,
+        fecha_hora: fechaParaBackend.toISOString(),
         tipo_comprobante: formData.tipo_comprobante,
         numero_comprobante: formData.numero_comprobante || null,
         entidad_comprobante: formData.tipo_comprobante === 'RECIBO' ? formData.entidad_comprobante : null,
@@ -198,7 +203,12 @@ const Movimientos = () => {
                 <div className="bg-[var(--c-secundario)] rounded-2xl p-6 space-y-4 mb-8 text-left border border-[var(--c-borde)]">
                   <div className="flex justify-between items-center pb-3 border-b border-[var(--c-borde)]/60">
                     <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Fecha de Registro</span>
-                    <span className="text-xs font-black text-[var(--c-primario)]">{new Date(formData.fecha).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
+                    <span className="text-xs font-black text-[var(--c-primario)]">
+                      {(() => {
+                        const [year, month, day] = formData.fecha.split('-').map(Number);
+                        return new Date(year, month - 1, day).toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' });
+                      })()}
+                    </span>
                   </div>
                   <div className="flex justify-between items-center pb-3 border-b border-[var(--c-borde)]/60">
                     <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Caja / Cuenta</span>
@@ -650,7 +660,7 @@ const Movimientos = () => {
                   return (
                     <tr key={mov._id}>
                       <td className="text-[10px] font-bold opacity-60 uppercase">
-                        {new Date(mov.fecha_hora).toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' })}
+                        {new Date(mov.fecha_hora).toLocaleDateString('es-PE', { dateStyle: 'medium' })}
                       </td>
                       <td>
                         <div
