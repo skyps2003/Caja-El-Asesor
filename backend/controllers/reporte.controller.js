@@ -119,14 +119,24 @@ const generarReporteMensual = async (req, res) => {
     worksheet.getCell('A12').value = 'Ingrese los movimientos de caja diarios';
     worksheet.getCell('A12').font = { italic: true, color: { argb: 'FFCC7A00' } };
 
-    const headers = ['FECHA', 'CONCEPTO', 'CÓDIGO', 'N° RECIBO', 'ENTRADAS', 'SALIDAS', 'SALDO'];
-    headers.forEach((h, i) => {
-      const cell = worksheet.getCell(13, i + 1);
-      cell.value = h;
+    const headerPositions = [
+      { col: 1, val: 'FECHA' },
+      { col: 2, val: 'CONCEPTO', merge: 'B13:D13' },
+      { col: 5, val: 'CÓDIGO' },
+      { col: 6, val: 'N° RECIBO' },
+      { col: 7, val: 'ENTRADAS' },
+      { col: 8, val: 'SALIDAS' },
+      { col: 9, val: 'SALDO' }
+    ];
+
+    headerPositions.forEach((h) => {
+      const cell = worksheet.getCell(13, h.col);
+      cell.value = h.val;
       cell.fill = fillHeader;
       cell.border = borderFull;
-      cell.font = { bold: true, color: { argb: 'FF7F6000' }, size: 9 }; // Marrón/Dorado oscuro
+      cell.font = { bold: true, color: { argb: 'FF7F6000' }, size: 9 };
       cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      if (h.merge) worksheet.mergeCells(h.merge);
     });
 
     let currentRow = 14;
@@ -135,6 +145,8 @@ const generarReporteMensual = async (req, res) => {
     movimientos.forEach((mov) => {
       worksheet.getCell(`A${currentRow}`).value = new Date(mov.fecha_hora).toLocaleDateString('es-PE');
       
+      // Concepto fusionado B-D
+      worksheet.mergeCells(`B${currentRow}:D${currentRow}`);
       let desc = mov.concepto || 'Sin descripción';
       if (mov.tipo_comprobante === 'FACTURA') {
         desc += ` (RUC: ${mov.ruc || '—'} - ${mov.razon_social || '—'})`;
@@ -142,28 +154,30 @@ const generarReporteMensual = async (req, res) => {
       worksheet.getCell(`B${currentRow}`).value = desc;
 
       const c = todasLasCajas.find(c => c._id.toString() === mov.id_caja.toString());
-      worksheet.getCell(`C${currentRow}`).value = c ? c.codigo : '—';
+      worksheet.getCell(`E${currentRow}`).value = c ? c.codigo : '—';
       
       const compPrefix = mov.tipo_comprobante === 'FACTURA' ? 'FAC' : mov.tipo_comprobante === 'RECIBO' ? 'REC' : '';
-      worksheet.getCell(`D${currentRow}`).value = compPrefix ? `${compPrefix}: ${mov.numero_comprobante || 'S/N'}` : 'S/C';
+      worksheet.getCell(`F${currentRow}`).value = compPrefix ? `${compPrefix}: ${mov.numero_comprobante || 'S/N'}` : 'S/C';
       
       if (mov.tipo === false || mov.tipo === 0) {
-        worksheet.getCell(`E${currentRow}`).value = mov.monto;
-        worksheet.getCell(`E${currentRow}`).numFmt = '"S/ " #,##0.00';
+        worksheet.getCell(`G${currentRow}`).value = mov.monto;
+        worksheet.getCell(`G${currentRow}`).numFmt = '"S/ " #,##0.00';
       } else {
-        worksheet.getCell(`F${currentRow}`).value = mov.monto;
-        worksheet.getCell(`F${currentRow}`).numFmt = '"S/ " #,##0.00';
+        worksheet.getCell(`H${currentRow}`).value = mov.monto;
+        worksheet.getCell(`H${currentRow}`).numFmt = '"S/ " #,##0.00';
       }
 
-      worksheet.getCell(`G${currentRow}`).value = mov.saldo_resultante;
-      worksheet.getCell(`G${currentRow}`).numFmt = '"S/ " #,##0.00';
-      worksheet.getCell(`G${currentRow}`).fill = fillGreen;
+      const cellSaldoResult = worksheet.getCell(`I${currentRow}`);
+      cellSaldoResult.value = mov.saldo_resultante;
+      cellSaldoResult.numFmt = '"S/ " #,##0.00';
+      cellSaldoResult.fill = fillGreen; // EL VERDE que solicitaste
       
-      // Bordes punteados para el cuerpo
-      ['A', 'B', 'C', 'D', 'E', 'F', 'G'].forEach(col => {
+      // Bordes punteados para el cuerpo (A-I)
+      ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].forEach(col => {
         worksheet.getCell(`${col}${currentRow}`).border = {
           left: { style: 'dotted' }, right: { style: 'dotted' }, bottom: { style: 'dotted' }
         };
+        worksheet.getCell(`${col}${currentRow}`).alignment = { vertical: 'middle' };
       });
 
       currentRow++;
@@ -206,13 +220,15 @@ const generarReporteMensual = async (req, res) => {
 
     // Ajustar anchos
     worksheet.getColumn('A').width = 12;
-    worksheet.getColumn('B').width = 45; // Más ancho para conceptos largos
-    worksheet.getColumn('C').width = 12;
-    worksheet.getColumn('D').width = 20;
-    worksheet.getColumn('E').width = 15;
-    worksheet.getColumn('F').width = 15;
+    worksheet.getColumn('B').width = 15;
+    worksheet.getColumn('C').width = 15;
+    worksheet.getColumn('D').width = 15; // B+C+D para concepto
+    worksheet.getColumn('E').width = 12;
+    worksheet.getColumn('F').width = 20;
     worksheet.getColumn('G').width = 15;
-    worksheet.getColumn('H').width = 18; // Para evitar los ####### en saldo máximo
+    worksheet.getColumn('H').width = 15;
+    worksheet.getColumn('I').width = 18; // El verde (Saldo)
+    worksheet.getColumn('L').width = 25;
     worksheet.getColumn('M').width = 30;
     worksheet.getColumn('N').width = 18;
 
