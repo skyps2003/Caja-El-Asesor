@@ -469,14 +469,7 @@ const AdminDashboard = () => {
                     <PieChart>
                       <Pie
                         data={cajas.map(c => {
-                          let color = c.color_primario;
-                          const n = c.nombre_caja.toLowerCase();
-                          if (n.includes('efectivo')) color = '#22C55E';
-                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
-                          else if (n.includes('interbank')) color = '#FACC15';
-                          else if (n.includes('nacion')) color = '#DC2626';
-                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
-                          return { name: c.nombre_caja, value: c.saldo_actual, color };
+                          return { name: c.nombre_caja, value: c.saldo_actual, color: c.color_primario || '#3B59DA' };
                         })}
                         cx="50%"
                         cy="50%"
@@ -488,16 +481,9 @@ const AdminDashboard = () => {
                         animationDuration={1500}
                         stroke="none"
                       >
-                        {cajas.map((c, index) => {
-                          let color = c.color_primario || '#3B59DA';
-                          const n = c.nombre_caja.toLowerCase();
-                          if (n.includes('efectivo')) color = '#22C55E';
-                          else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
-                          else if (n.includes('interbank')) color = '#FACC15';
-                          else if (n.includes('nacion')) color = '#DC2626';
-                          else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
-                          return <Cell key={`cell-${index}`} fill={color} />;
-                        })}
+                        {cajas.map((c, index) => (
+                          <Cell key={`cell-${index}`} fill={c.color_primario || '#3B59DA'} />
+                        ))}
                       </Pie>
                       <Tooltip 
                         contentStyle={{ 
@@ -607,48 +593,65 @@ const AdminDashboard = () => {
                         <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-2 ml-1">Denominación</label>
                         <input required className="premium-input" name="nombre_caja" value={formData.nombre_caja || ''} onChange={handleChange} placeholder="Caja General" />
                       </div>
-                      <div className="col-span-2 grid grid-cols-2 gap-4 p-4 bg-[var(--c-secundario)] rounded-2xl border border-[var(--c-borde)]">
-                        <div>
-                          <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-widest mb-1">Mínimo sugerido</label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--c-texto-sub)]">S/</span>
-                            <input required type="number" className="premium-input !pl-8" name="saldo_minimo" value={formData.saldo_minimo || 0} onChange={handleChange} />
+                      <div className="col-span-2 grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-[var(--c-secundario)] rounded-2xl border border-[var(--c-borde)]">
+                          <label className="block text-[10px] font-black text-[var(--c-texto-sub)] uppercase tracking-widest mb-3">Límites de Saldo</label>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <span className="block text-[9px] font-bold text-[var(--c-texto-sub)] mb-1">Mínimo</span>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--c-texto-sub)]">S/</span>
+                                <input required type="number" className="premium-input !py-1.5 !pl-6 !text-xs" name="saldo_minimo" value={formData.saldo_minimo || 0} onChange={handleChange} />
+                              </div>
+                            </div>
+                            <div>
+                              <span className="block text-[9px] font-bold text-[var(--c-texto-sub)] mb-1">Máximo</span>
+                              <div className="relative">
+                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[var(--c-texto-sub)]">S/</span>
+                                <input required type="number" className="premium-input !py-1.5 !pl-6 !text-xs" name="saldo_maximo" value={formData.saldo_maximo || 0} onChange={handleChange} />
+                              </div>
+                            </div>
                           </div>
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-widest mb-1">Límite máximo</label>
-                          <div className="relative">
-                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-xs font-bold text-[var(--c-texto-sub)]">S/</span>
-                            <input required type="number" className="premium-input !pl-8" name="saldo_maximo" value={formData.saldo_maximo || 0} onChange={handleChange} />
+
+                        <div className="p-4 bg-[var(--c-secundario)] rounded-2xl border border-[var(--c-borde)]">
+                          <label className="block text-[10px] font-black text-[var(--c-texto-sub)] uppercase tracking-widest mb-3">Color de Identidad</label>
+                          <div className="flex items-center gap-4">
+                            <div className="relative shrink-0">
+                              <input 
+                                type="color" 
+                                id="color_picker_main"
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                value={formData.color_primario || '#3B59DA'}
+                                onChange={(e) => setFormData(prev => ({ ...prev, color_primario: e.target.value, color_secundario: e.target.value }))}
+                              />
+                              <div 
+                                className="w-12 h-12 rounded-xl shadow-md border-2 border-white"
+                                style={{ backgroundColor: formData.color_primario || '#3B59DA' }}
+                              ></div>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5">
+                              {['#22C55E', '#3B59DA', '#FACC15', '#DC2626', '#7C3AED', '#64748B', '#000000'].map(c => (
+                                <button
+                                  key={c}
+                                  type="button"
+                                  onClick={() => setFormData(prev => ({ ...prev, color_primario: c, color_secundario: c }))}
+                                  className={`w-5 h-5 rounded-md transition-all border ${formData.color_primario === c ? 'border-[var(--c-primario)] scale-110' : 'border-white'}`}
+                                  style={{ backgroundColor: c }}
+                                />
+                              ))}
+                              <label htmlFor="color_picker_main" className="w-5 h-5 rounded-md border border-dashed border-[var(--c-borde)] flex items-center justify-center cursor-pointer hover:bg-white">
+                                <span className="text-xs font-bold text-[var(--c-texto-sub)]">+</span>
+                              </label>
+                            </div>
                           </div>
                         </div>
                       </div>
+
                       <div className="col-span-2">
-                        <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider mb-3 ml-1">Identidad de la Caja (Bancos)</label>
-                        <div className="grid grid-cols-5 gap-3">
-                          {[
-                            { name: 'Efectivo', p: '#22C55E' },
-                            { name: 'BBVA', p: '#2563EB' },
-                            { name: 'Interbank', p: '#FACC15' },
-                            { name: 'B. Nación', p: '#DC2626' },
-                            { name: 'BCP', p: '#7C3AED' }
-                          ].map(bank => (
-                            <button
-                              key={bank.name}
-                              type="button"
-                              onClick={() => setFormData(prev => ({ ...prev, color_primario: bank.p, color_secundario: bank.p }))}
-                              className={`flex flex-col items-center gap-2 p-2 rounded-xl border-2 transition-all ${formData.color_primario === bank.p ? 'border-[var(--c-accion)] bg-[var(--c-fondo-card)] shadow-sm' : 'border-transparent bg-[var(--c-secundario)] opacity-60 hover:opacity-100'}`}
-                            >
-                              <div className="w-8 h-8 rounded-lg shadow-sm" style={{ background: bank.p }}></div>
-                              <span className="text-[8px] font-black uppercase tracking-tighter text-center leading-none">{bank.name}</span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="col-span-2">
-                         <div className="flex items-start gap-3 p-3 bg-[var(--c-accion-pastel)] rounded-xl border border-[var(--c-accion)]/10">
-                            <svg className="w-5 h-5 text-[var(--c-accion)] mt-0.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                            <p className="text-[11px] text-[var(--c-primario)] font-medium leading-tight">Este tipo de caja se replicará automáticamente en todas las sedes activas del sistema.</p>
+                         <div className="flex items-center gap-3 p-3 bg-[var(--c-accion-pastel)] rounded-xl border border-[var(--c-accion)]/10">
+                            <svg className="w-4 h-4 text-[var(--c-accion)] shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <p className="text-[10px] text-[var(--c-primario)] font-medium leading-tight">Esta configuración se replicará en todas las sedes del sistema.</p>
                          </div>
                       </div>
                     </div>
