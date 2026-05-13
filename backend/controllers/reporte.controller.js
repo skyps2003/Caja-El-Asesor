@@ -35,6 +35,19 @@ const generarReporteMensual = async (req, res) => {
     const workbook = new ExcelJS.Workbook();
     const worksheet = workbook.addWorksheet('Reporte Diario');
 
+    // --- AGREGAR LOGO (En 4 celdas aprox A1:B2) ---
+    const logoPath = path.join(__dirname, '../../frontend/public/Logo para claro.png');
+    if (fs.existsSync(logoPath)) {
+      const logoId = workbook.addImage({
+        filename: logoPath,
+        extension: 'png',
+      });
+      worksheet.addImage(logoId, {
+        tl: { col: 0, row: 0 },
+        br: { col: 2, row: 2 } // Cubre A1, A2, B1, B2
+      });
+    }
+
     // --- ESTILOS ---
     const borderFull = {
       top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' }

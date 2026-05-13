@@ -18,62 +18,142 @@ const DiffBadge = ({ diferencia }) => {
 };
 
 // ─── Generador de PDF ───────────────────────────────────────────────────────
-const generarPDF = (datos, tipoPeriodo, nombreSede) => {
+const generarPDF = (datos, tipoPeriodo, nombreSede, imgFondo, fechaSeleccionada) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const ancho = doc.internal.pageSize.getWidth();
+  const alto = doc.internal.pageSize.getHeight();
 
-  // Cabecera
-  doc.setFillColor(30, 50, 130);
-  doc.rect(0, 0, ancho, 30, 'F');
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('REPORTE DE MOVIMIENTOS', ancho / 2, 13, { align: 'center' });
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`${tipoPeriodo === 'DIARIO' ? 'Cierre Diario' : 'Cierre Mensual'} — Sede: ${nombreSede}`, ancho / 2, 22, { align: 'center' });
+  const totalPages = () => doc.internal.getNumberOfPages();
 
-  // Resumen
-  let y = 38;
+  const aplicarFondo = () => {
+    if (imgFondo && imgFondo.complete) {
+      doc.addImage(imgFondo, 'PNG', 0, 0, ancho, alto, undefined, 'FAST');
+    } else {
+      // Fallback: Elegante cabecera si no hay imagen
+      doc.setFillColor(30, 50, 130);
+      doc.rect(0, 0, ancho, 40, 'F');
+    }
+  };
+
+  // Primera página
+  aplicarFondo();
+
+  // Título y Subtítulo (ajustado para no chocar con membrete si es posible)
+  // Generalmente los membretes tienen espacio arriba. Si no, bajamos un poco más.
+  let y = 45; 
+  
   doc.setTextColor(30, 50, 130);
-  doc.setFontSize(11);
+  doc.setFontSize(22);
   doc.setFont('helvetica', 'bold');
-  doc.text('RESUMEN DEL PERÍODO', 14, y);
+  doc.text('REPORTE FINANCIERO', ancho / 2, y, { align: 'center' });
+  
+  y += 8;
+  doc.setFontSize(12);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(100, 100, 120);
+  doc.text(`${tipoPeriodo === 'DIARIO' ? 'Cierre de Caja Diario' : 'Consolidado Mensual de Sede'}`, ancho / 2, y, { align: 'center' });
+  
   y += 6;
-
-  doc.setDrawColor(200, 200, 220);
-  doc.setFillColor(245, 247, 255);
-  doc.roundedRect(14, y, ancho - 28, 28, 2, 2, 'FD');
-
-  doc.setTextColor(80, 80, 120);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Período:', 20, y + 7);
-  doc.text(`Fecha inicio: ${formatFechaCorta(datos.fecha_inicio)}`, 20, y + 13);
-  doc.text(`Movimientos: ${datos.total_movimientos}`, 20, y + 19);
-
-  doc.setTextColor(22, 163, 74);
+  doc.setFontSize(10);
   doc.setFont('helvetica', 'bold');
-  doc.text(`Total Ingresos: ${formatSol(datos.total_ingresos)}`, ancho / 2, y + 7, { align: 'center' });
-  doc.setTextColor(220, 38, 38);
-  doc.text(`Total Egresos:  ${formatSol(datos.total_egresos)}`, ancho / 2, y + 14, { align: 'center' });
   doc.setTextColor(30, 50, 130);
-  doc.text(`Neto:           ${formatSol(datos.neto)}`, ancho / 2, y + 21, { align: 'center' });
+  doc.text(`SEDE: ${nombreSede.toUpperCase()}`, ancho / 2, y, { align: 'center' });
 
-  y += 35;
+  // Cuadro de Resumen con estilo Premium
+  y += 12;
+  const margen = 14;
+  const anchoCaja = (ancho - (margen * 2));
+  
+  doc.setDrawColor(30, 50, 130);
+  doc.setLineWidth(0.5);
+  doc.line(margen, y, ancho - margen, y);
+  
+  y += 10;
+  doc.setTextColor(80, 80, 100);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('RESUMEN OPERATIVO', margen, y);
+  
+  y += 6;
+  // Fondo suave para el resumen
+  doc.setFillColor(248, 250, 255);
+  doc.roundedRect(margen, y, anchoCaja, 30, 3, 3, 'F');
+  
+  // Datos del resumen
+  const col1 = margen + 6;
+  const col2 = ancho / 2;
+  const col3 = ancho - margen - 6;
+
+  doc.setFontSize(8);
+  doc.setTextColor(120, 120, 140);
+  doc.text('FECHA DEL REPORTE', col1, y + 8);
+  const colRegistrosLabel = ancho - 85;
+  doc.text('REGISTROS', colRegistrosLabel, y + 8, { align: 'center' });
+  doc.text('SALDO NETO', col3, y + 8, { align: 'right' });
+
+  doc.setFontSize(11);
+  doc.setTextColor(30, 50, 130);
+  doc.setFont('helvetica', 'bold');
+  
+  // Lógica de fecha dinámica (Evitando saltos por Zona Horaria)
+  let textoFecha = "";
+  if (tipoPeriodo === 'DIARIO') {
+    // Usamos la fecha seleccionada del input directamente para evitar desfases de zona horaria
+    const [year, month, day] = fechaSeleccionada.split('-').map(Number);
+    const fSeleccionada = new Date(year, month - 1, day);
+    textoFecha = fSeleccionada.toLocaleDateString('es-PE', { 
+      day: '2-digit', month: 'long', year: 'numeric' 
+    }).toUpperCase();
+  } else {
+    // Rango mensual (usando la fecha de inicio enviada por el backend)
+    const hoy = new Date();
+    // Ajustamos la fecha de inicio para que no salte al día anterior
+    const fInicio = new Date(datos.fecha_inicio);
+    fInicio.setMinutes(fInicio.getMinutes() + fInicio.getTimezoneOffset());
+    
+    const mesNombre = fInicio.toLocaleDateString('es-PE', { month: 'long' }).toUpperCase();
+    const esMesActual = fInicio.getMonth() === hoy.getMonth() && fInicio.getFullYear() === hoy.getFullYear();
+    
+    if (esMesActual) {
+      const hoyStr = hoy.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase();
+      textoFecha = `DEL 01 DE ${mesNombre} AL ${hoyStr}`;
+    } else {
+      const ultimoDia = new Date(fInicio.getFullYear(), fInicio.getMonth() + 1, 0);
+      const ultimoDiaStr = ultimoDia.toLocaleDateString('es-PE', { day: '2-digit', month: 'long', year: 'numeric' }).toUpperCase();
+      textoFecha = `DEL 01 DE ${mesNombre} AL ${ultimoDiaStr}`;
+    }
+  }
+
+  // Ajuste de fuente y posiciones para evitar solapamiento
+  const fontSizeFecha = textoFecha.length > 25 ? 8 : 10;
+  doc.setFontSize(fontSizeFecha);
+  doc.text(textoFecha, col1, y + 16);
+  
+  doc.setFontSize(9);
+  // Movemos la columna central más a la derecha
+  const colRegistros = ancho - 85; 
+  doc.text(`${datos.total_movimientos} registros`, colRegistros, y + 16, { align: 'center' });
+  
+  const colorNeto = datos.neto >= 0 ? [22, 163, 74] : [220, 38, 38];
+  doc.setTextColor(colorNeto[0], colorNeto[1], colorNeto[2]);
+  doc.setFontSize(11);
+  doc.text(formatSol(datos.neto), col3, y + 16, { align: 'right' });
+
+  // Desglose de totales
+  y += 24;
+  doc.setFontSize(8);
+  doc.setTextColor(22, 163, 74);
+  doc.text(`(+) INGRESOS: ${formatSol(datos.total_ingresos)}`, col1, y);
+  doc.setTextColor(220, 38, 38);
+  doc.text(`(-) EGRESOS: ${formatSol(datos.total_egresos)}`, col3, y, { align: 'right' });
+
+  y += 12;
 
   // Tabla de movimientos
-  doc.setTextColor(30, 50, 130);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('DETALLE DE MOVIMIENTOS', 14, y);
-  y += 4;
-
   const filas = datos.movimientos.map((m) => [
     formatFecha(m.fecha_hora),
-    m.id_caja?.codigo || '—',
     m.id_caja?.nombre_caja || '—',
-    m.tipo ? 'SALIDA' : 'ENTRADA',
+    m.tipo ? 'EGRESO' : 'INGRESO',
     m.concepto || '—',
     formatSol(m.monto),
     formatSol(m.saldo_resultante),
@@ -81,39 +161,53 @@ const generarPDF = (datos, tipoPeriodo, nombreSede) => {
 
   autoTable(doc, {
     startY: y,
-    head: [['Fecha', 'Cód.', 'Caja', 'Tipo', 'Concepto', 'Monto', 'Saldo']],
+    head: [['Fecha / Hora', 'Caja / Cuenta', 'Tipo', 'Concepto / Detalle', 'Monto', 'Saldo']],
     body: filas,
-    styles: { fontSize: 8, cellPadding: 2.5, halign: 'left' },
-    headStyles: { fillColor: [30, 50, 130], textColor: [255, 255, 255], fontStyle: 'bold' },
-    alternateRowStyles: { fillColor: [245, 247, 255] },
+    margin: { left: margen, right: margen, bottom: 15 },
+    theme: 'striped',
+    headStyles: { 
+      fillColor: [30, 50, 130], 
+      textColor: [255, 255, 255], 
+      fontSize: 8, 
+      fontStyle: 'bold',
+      halign: 'center'
+    },
+    styles: { 
+      fontSize: 7.5, 
+      cellPadding: 3, 
+      valign: 'middle' 
+    },
     columnStyles: {
       0: { cellWidth: 28 },
-      1: { cellWidth: 12 },
-      2: { cellWidth: 30 },
-      3: { cellWidth: 17, halign: 'center' },
-      4: { cellWidth: 45 },
-      5: { cellWidth: 22, halign: 'right' },
-      6: { cellWidth: 22, halign: 'right' },
+      1: { cellWidth: 35 },
+      2: { cellWidth: 18, halign: 'center' },
+      3: { cellWidth: 'auto' },
+      4: { cellWidth: 26, halign: 'right' },
+      5: { cellWidth: 26, halign: 'right' },
+    },
+    didDrawPage: (data) => {
+      // Aplicar fondo en páginas nuevas
+      if (doc.internal.getNumberOfPages() > 1) {
+        // Necesitamos una forma de saber si es una nueva página
+        // autoTable lo hace internamente, pero podemos usar hooks
+      }
     },
     didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 3) {
-        if (data.cell.raw === 'ENTRADA') data.cell.styles.textColor = [22, 163, 74];
+      if (data.section === 'body' && data.column.index === 2) {
+        if (data.cell.raw === 'INGRESO') data.cell.styles.textColor = [22, 163, 74];
         else data.cell.styles.textColor = [220, 38, 38];
       }
     },
+    // Este hook se ejecuta al inicio de cada nueva página creada por autoTable
+    beforePageContent: (data) => {
+      if (data.pageNumber > 1) {
+        aplicarFondo();
+      }
+    }
   });
 
-  // Footer
-  const totalPages = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= totalPages; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(160, 160, 180);
-    doc.text(`Generado el ${new Date().toLocaleString('es-PE')} — El Asesor`, 14, doc.internal.pageSize.getHeight() - 8);
-    doc.text(`Pág. ${i} / ${totalPages}`, ancho - 14, doc.internal.pageSize.getHeight() - 8, { align: 'right' });
-  }
-
-  const nombreArchivo = `cierre_${tipoPeriodo.toLowerCase()}_${new Date().toISOString().split('T')[0]}.pdf`;
+  // El footer ha sido removido a petición del usuario.
+  const nombreArchivo = `Reporte_${tipoPeriodo}_${nombreSede.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
   doc.save(nombreArchivo);
 };
 
@@ -134,6 +228,8 @@ const Cierres = () => {
     saldo_real: '',
     observaciones: '',
   });
+
+  const [fechaReporte, setFechaReporte] = useState(new Date().toISOString().split('T')[0]);
 
   const nombreSede = usuario?.id_sede?.nombre || 'Mi Sede';
 
@@ -200,18 +296,25 @@ const Cierres = () => {
   const handleGenerarPDF = async (tipoPeriodo) => {
     setCargandoPDF(tipoPeriodo);
     try {
-      const hoy = new Date();
-      const anio = hoy.getFullYear();
-      const mes = String(hoy.getMonth() + 1).padStart(2, '0');
-      const dia = String(hoy.getDate()).padStart(2, '0');
-      const fechaParam = tipoPeriodo === 'DIARIO' ? `${anio}-${mes}-${dia}` : `${anio}-${mes}`;
+      const fechaParam = tipoPeriodo === 'DIARIO' ? fechaReporte : fechaReporte.substring(0, 7);
+
+      // Cargar la hoja membretada
+      const img = new Image();
+      img.src = '/Papel mebretado.png';
+      await new Promise((resolve) => {
+        img.onload = resolve;
+        img.onerror = () => {
+          console.error("No se pudo cargar el membrete.");
+          resolve();
+        };
+      });
 
       const { data } = await API.get(`/cierres/movimientos-periodo?tipo=${tipoPeriodo}&fecha=${fechaParam}`);
       if (!data.movimientos || data.movimientos.length === 0) {
-        toast.error(`No hay movimientos ${tipoPeriodo === 'DIARIO' ? 'de hoy' : 'de este mes'} para generar el PDF.`);
+        toast.error(`No hay movimientos para la fecha ${fechaParam} para generar el PDF.`);
         return;
       }
-      generarPDF(data, tipoPeriodo, nombreSede);
+      generarPDF(data, tipoPeriodo, nombreSede, img, fechaReporte);
     } catch (err) {
       toast.error('Error al generar el PDF: ' + (err.response?.data?.mensaje || err.message));
     } finally {
@@ -271,44 +374,59 @@ const Cierres = () => {
               </p>
             </div>
 
-            <div className="flex gap-4">
-              <button
-                onClick={() => handleGenerarPDF('DIARIO')}
-                disabled={!!cargandoPDF}
-                className="btn-gold !bg-[var(--c-fondo-card)] !text-[var(--c-primario)] !border-[var(--c-borde)] hover:!border-[var(--c-accion)]"
-              >
-                {cargandoPDF === 'DIARIO' ? (
-                  <span className="w-4 h-4 border-2 border-[var(--c-primario)]/20 border-t-[var(--c-primario)] rounded-full animate-spin" />
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                )}
-                Reporte Diario
-              </button>
-              <button
-                onClick={() => handleGenerarPDF('MENSUAL')}
-                disabled={!!cargandoPDF}
-                className="btn-gold !bg-[var(--c-fondo-card)] !text-[var(--c-primario)] !border-[var(--c-borde)] hover:!border-[var(--c-accion)]"
-              >
-                {cargandoPDF === 'MENSUAL' ? (
-                  <span className="w-4 h-4 border-2 border-[var(--c-primario)]/20 border-t-[var(--c-primario)] rounded-full animate-spin" />
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                )}
-                Balance Mensual (PDF)
-              </button>
+            <div className="flex flex-col md:flex-row md:items-end gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-widest ml-1">Fecha de Consulta</label>
+                <input 
+                  type="date" 
+                  value={fechaReporte} 
+                  onChange={(e) => setFechaReporte(e.target.value)}
+                  className="premium-input !py-2 !px-4 !text-xs !bg-[var(--c-fondo-card)] border-[var(--c-borde)] hover:border-[var(--c-accion)] transition-colors"
+                />
+              </div>
 
-              <button
-                onClick={handleExportExcel}
-                disabled={exportandoExcel || cajas.length === 0}
-                className="btn-gold"
-              >
-                {exportandoExcel ? (
-                  <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                ) : (
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                )}
-                Reporte Mensual (Excel)
-              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => handleGenerarPDF('DIARIO')}
+                  disabled={!!cargandoPDF}
+                  className="btn-gold !bg-[var(--c-fondo-card)] !text-[var(--c-primario)] !border-[var(--c-borde)] hover:!border-[var(--c-accion)] !px-4"
+                  title="Generar PDF del día seleccionado"
+                >
+                  {cargandoPDF === 'DIARIO' ? (
+                    <span className="w-4 h-4 border-2 border-[var(--c-primario)]/20 border-t-[var(--c-primario)] rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  )}
+                  Reporte Diario
+                </button>
+                <button
+                  onClick={() => handleGenerarPDF('MENSUAL')}
+                  disabled={!!cargandoPDF}
+                  className="btn-gold !bg-[var(--c-fondo-card)] !text-[var(--c-primario)] !border-[var(--c-borde)] hover:!border-[var(--c-accion)] !px-4"
+                  title="Generar PDF del mes seleccionado"
+                >
+                  {cargandoPDF === 'MENSUAL' ? (
+                    <span className="w-4 h-4 border-2 border-[var(--c-primario)]/20 border-t-[var(--c-primario)] rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  )}
+                  PDF Mensual
+                </button>
+
+                <button
+                  onClick={handleExportExcel}
+                  disabled={exportandoExcel || cajas.length === 0}
+                  className="btn-gold !px-4"
+                  title="Exportar consolidado de toda la sede en Excel"
+                >
+                  {exportandoExcel ? (
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
+                  )}
+                  Excel Mensual
+                </button>
+              </div>
             </div>
           </div>
 
