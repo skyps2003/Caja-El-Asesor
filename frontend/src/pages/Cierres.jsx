@@ -365,12 +365,12 @@ const Cierres = () => {
         <div className="max-w-7xl mx-auto px-4 py-10">
 
           {/* Header Section */}
-          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6">
+          <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 animate-fadeIn">
             <div className="space-y-1">
-              <h1 className="text-4xl font-heading font-bold text-[var(--c-primario)]">Consolidación de Sede</h1>
+              <h1 className="text-4xl font-heading font-black text-[var(--c-primario)]">Consolidación de Sede</h1>
               <p className="text-[var(--c-texto-sub)] font-medium flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-[var(--c-accion)] rounded-full"></span>
-                Operaciones Centralizadas — <span className="text-[var(--c-primario)] font-bold">{nombreSede}</span>
+                Operaciones Centralizadas — <span className="text-[var(--c-primario)] font-black">{nombreSede}</span>
               </p>
             </div>
 
@@ -519,7 +519,7 @@ const Cierres = () => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <input type="hidden" name="tipo" value={formData.tipo} />
                   <div>
-                    <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-wider mb-2 ml-1">Efectivo en Bóveda (S/)</label>
+                    <label className="block text-[10px] font-black text-[var(--c-texto-sub)] uppercase tracking-widest mb-2 ml-1">Efectivo en Bóveda (S/)</label>
                     <div className="relative">
                       <span className="absolute left-4 top-1/2 -translate-y-1/2 font-bold text-[var(--c-texto-sub)]">S/</span>
                       <input required type="number" step="0.01" min="0" className="premium-input !pl-10 !bg-[var(--c-secundario)]"
@@ -529,7 +529,7 @@ const Cierres = () => {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-[var(--c-texto-sub)] uppercase tracking-wider mb-2 ml-1">Notas de Auditoría</label>
+                    <label className="block text-[10px] font-black text-[var(--c-texto-sub)] uppercase tracking-widest mb-2 ml-1">Notas de Auditoría</label>
                     <textarea className="premium-input !bg-[var(--c-secundario)] resize-none" rows={2} placeholder="Describa cualquier discrepancia o novedad..."
                       value={formData.observaciones}
                       onChange={(e) => setFormData((p) => ({ ...p, observaciones: e.target.value }))} />

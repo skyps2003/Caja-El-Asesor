@@ -65,8 +65,8 @@ exports.resumenDiario = async (req, res) => {
     const { dias = 30 } = req.query;
     let filtro = {};
 
-    // Si es cajero o admin, filtrar por la sede que le corresponde
-    if (req.usuario.rol === 'CAJERO_SEDE' || req.usuario.rol === 'ADMINISTRADOR') {
+    // Solo filtrar por sede si es un CAJERO. El ADMINISTRADOR ve el consolidado GLOBAL por defecto.
+    if (req.usuario.rol === 'CAJERO_SEDE') {
       const idSede = await obtenerIdSede(req);
       const cajas = await getCajasDeSede(idSede);
       filtro.id_caja = { $in: cajas.map(c => c._id) };
@@ -121,7 +121,7 @@ exports.resumenMensual = async (req, res) => {
   try {
     let matchStage = {};
 
-    if (req.usuario.rol === 'CAJERO_SEDE' || req.usuario.rol === 'ADMINISTRADOR') {
+    if (req.usuario.rol === 'CAJERO_SEDE') {
       const idSede = await obtenerIdSede(req);
       const cajas = await getCajasDeSede(idSede);
       matchStage = { id_caja: { $in: cajas.map(c => c._id) } };
@@ -252,7 +252,11 @@ exports.movimientosPeriodo = async (req, res) => {
       id_caja: { $in: cajaIds },
       fecha_hora: { $gte: fechaDesde, $lte: fechaHasta },
     })
-      .populate('id_caja', 'codigo nombre_caja')
+      .populate({
+        path: 'id_caja',
+        select: 'codigo nombre_caja id_sede',
+        populate: { path: 'id_sede', select: 'nombre' }
+      })
       .populate('id_usuario', 'nombre')
       .sort({ fecha_hora: 1 });
 

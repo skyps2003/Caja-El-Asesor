@@ -8,7 +8,7 @@ import autoTable from 'jspdf-autotable';
 const formatSol = (n = 0) => `S/ ${Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
 const formatFecha = (f) => new Date(f).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
 
-const generarPDF = (datos, tipoPeriodo, nombreSede, imgFondo, fechaSeleccionada) => {
+const generarPDF = (datos, tipoPeriodo, nombreSede, imgFondo, fechaSeleccionada, incluirSede = false) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const ancho = doc.internal.pageSize.getWidth();
   const alto = doc.internal.pageSize.getHeight();
@@ -112,30 +112,46 @@ const generarPDF = (datos, tipoPeriodo, nombreSede, imgFondo, fechaSeleccionada)
 
   y += 12;
 
-  const filas = datos.movimientos.map((m) => [
-    formatFecha(m.fecha_hora),
-    m.id_caja?.nombre_caja || '—',
-    m.tipo ? 'EGRESO' : 'INGRESO',
-    m.concepto || '—',
-    formatSol(m.monto),
-    formatSol(m.saldo_resultante),
-  ]);
+  const cabeceras = ['Fecha / Hora'];
+  if (incluirSede) cabeceras.push('Sede');
+  cabeceras.push('Caja / Cuenta', 'Tipo', 'Concepto / Detalle', 'Monto', 'Saldo');
+
+  const filas = datos.movimientos.map((m) => {
+    const fila = [formatFecha(m.fecha_hora)];
+    if (incluirSede) fila.push(m.id_caja?.id_sede?.nombre || '—');
+    fila.push(
+      m.id_caja?.nombre_caja || '—',
+      m.tipo ? 'EGRESO' : 'INGRESO',
+      m.concepto || '—',
+      formatSol(m.monto),
+      formatSol(m.saldo_resultante)
+    );
+    return fila;
+  });
 
   autoTable(doc, {
     startY: y,
-    head: [['Fecha / Hora', 'Caja / Cuenta', 'Tipo', 'Concepto / Detalle', 'Monto', 'Saldo']],
+    head: [cabeceras],
     body: filas,
     margin: { left: margen, right: margen, bottom: 15 },
     theme: 'striped',
     headStyles: { 
       fillColor: [30, 50, 130], 
       textColor: [255, 255, 255], 
-      fontSize: 8, 
+      fontSize: incluirSede ? 7 : 8, 
       fontStyle: 'bold',
       halign: 'center'
     },
-    styles: { fontSize: 7.5, cellPadding: 3, valign: 'middle' },
-    columnStyles: {
+    styles: { fontSize: incluirSede ? 7 : 7.5, cellPadding: incluirSede ? 2 : 3, valign: 'middle' },
+    columnStyles: incluirSede ? {
+      0: { cellWidth: 26 },
+      1: { cellWidth: 20 },
+      2: { cellWidth: 26 },
+      3: { cellWidth: 16, halign: 'center' },
+      4: { cellWidth: 'auto' },
+      5: { cellWidth: 22, halign: 'right' },
+      6: { cellWidth: 22, halign: 'right' },
+    } : {
       0: { cellWidth: 28 },
       1: { cellWidth: 35 },
       2: { cellWidth: 18, halign: 'center' },
@@ -144,7 +160,8 @@ const generarPDF = (datos, tipoPeriodo, nombreSede, imgFondo, fechaSeleccionada)
       5: { cellWidth: 26, halign: 'right' },
     },
     didParseCell: (data) => {
-      if (data.section === 'body' && data.column.index === 2) {
+      const idxTipo = incluirSede ? 3 : 2;
+      if (data.section === 'body' && data.column.index === idxTipo) {
         if (data.cell.raw === 'INGRESO') data.cell.styles.textColor = [22, 163, 74];
         else data.cell.styles.textColor = [220, 38, 38];
       }
@@ -202,7 +219,7 @@ const Documentos = () => {
           toast.error(`No hay movimientos para generar el PDF.`);
           return;
         }
-        generarPDF(data, tipoPeriodo, sedeNombre, img, filtros.fecha);
+        generarPDF(data, tipoPeriodo, sedeNombre, img, filtros.fecha, true);
       } else {
         const endpoint = filtros.tipoReporte === 'diario' ? '/reportes/diario' : '/reportes/mensual';
         const payload = {

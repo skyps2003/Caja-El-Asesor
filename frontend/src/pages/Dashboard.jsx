@@ -22,6 +22,11 @@ const Dashboard = () => {
   const THEME_COLORS = ['#1A1A5A', '#3B59DA', '#2D47B8', '#4F6EF7', '#64748B', '#94A3B8'];
 
   const formatSol = (n) => `S/ ${Number(n || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 })}`;
+  const formatFechaCompleta = (f) => {
+    if (!f) return '';
+    const [anio, mes, dia] = f.split('-');
+    return `${dia}/${mes}/${anio}`;
+  };
 
   useEffect(() => {
     const cargarDatos = async () => {
@@ -51,6 +56,18 @@ const Dashboard = () => {
   const getCajasPorSede = (sedeId) => cajas.filter((c) => (c.id_sede?._id || c.id_sede) === sedeId);
   const getSaldoTotalSede = (sedeId) => getCajasPorSede(sedeId).reduce((acc, c) => acc + c.saldo_actual, 0);
 
+  const datosAgrupadosChart = useMemo(() => {
+    const grupos = {};
+    cajas.forEach(c => {
+      const key = c.nombre_caja;
+      if (!grupos[key]) {
+        grupos[key] = { name: key, value: 0, color: c.color_primario || '#3B59DA' };
+      }
+      grupos[key].value += c.saldo_actual;
+    });
+    return Object.values(grupos).filter(g => g.value > 0);
+  }, [cajas]);
+
   const chartData = useMemo(() => {
     const detalle = resumenDiario[fechaSeleccionada]?.detalle_cajas;
     
@@ -78,8 +95,9 @@ const Dashboard = () => {
         if (n.includes('abancay')) color = '#A855F7';
         else if (n.includes('challhuahuacho')) color = '#16A34A';
         
-        return { name: s.nombre, value: inG + outG, ingresos: inG, egresos: outG, color };
-      }).filter(d => d.value > 0);
+        // Usamos el neto para la representación visual, pero mostramos el desglose
+        return { name: s.nombre, value: Math.abs(inG - outG), ingresos: inG, egresos: outG, neto: inG - outG, color };
+      }).filter(d => (d.ingresos + d.egresos) > 0);
     } else {
       outer = cajas.map(c => {
         const inG = detalle[c._id]?.ingresos || 0;
@@ -87,7 +105,7 @@ const Dashboard = () => {
         totalIngresos += inG;
         totalEgresos += outG;
         
-        let color = c.color_primario || '#3B59DA'; // Azul Cobalto Vibrante
+        let color = c.color_primario || '#3B59DA'; 
         const n = c.nombre_caja.toLowerCase();
         if (n.includes('efectivo')) color = '#22C55E';
         else if (n.includes('bbva') || n.includes('continental')) color = '#2563EB';
@@ -95,8 +113,8 @@ const Dashboard = () => {
         else if (n.includes('nacion')) color = '#DC2626';
         else if (n.includes('bcp') || n.includes('credito')) color = '#7C3AED';
         
-        return { name: c.nombre_caja, value: inG + outG, ingresos: inG, egresos: outG, color };
-      }).filter(d => d.value > 0);
+        return { name: c.nombre_caja, value: Math.abs(inG - outG), ingresos: inG, egresos: outG, neto: inG - outG, color };
+      }).filter(d => (d.ingresos + d.egresos) > 0);
     }
 
     if (totalIngresos === 0 && totalEgresos === 0) return emptyState;
@@ -180,12 +198,12 @@ const Dashboard = () => {
           </p>
         </div>
 
-        {/* Top Stats - Formal */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
+        {/* Top Stats - Reverted to 3 Equal Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm relative overflow-hidden group">
             <div className="absolute top-0 right-0 w-24 h-24 bg-[var(--c-accion-pastel)] rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-110"></div>
             <div className="relative z-10">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--c-accion)] mb-2">Capital Total</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--c-accion)] mb-2">Capital Total</p>
               <p className="text-4xl font-black font-heading text-[var(--c-primario)] tracking-tight">{formatSol(saldoTotal)}</p>
               <div className="mt-4 flex items-center gap-2 text-[10px] font-bold text-[var(--c-entrada)] bg-[var(--c-success-pastel)] w-fit px-2 py-0.5 rounded-md">
                 <span className="w-1.5 h-1.5 bg-[var(--c-entrada)] rounded-full animate-pulse"></span>
@@ -196,15 +214,25 @@ const Dashboard = () => {
           
           <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm relative overflow-hidden group">
             <div className="relative z-10">
-              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--c-texto-sub)] mb-2">Saldo Neto Diario</p>
-              <p className={`text-4xl font-black font-heading tracking-tight ${((resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0)) >= 0 ? 'text-[var(--c-entrada)]' : 'text-[var(--c-salida)]'}`}>
-                {formatSol((resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0))}
-              </p>
-              <p className="mt-4 text-[11px] font-medium text-[var(--c-texto-sub)]">Balance de operaciones del día</p>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[var(--c-texto-sub)] mb-2">Balance de operaciones del día</p>
+              <div className="flex items-end justify-between">
+                <div>
+                  <p className={`text-4xl font-black font-heading tracking-tight ${((resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0)) >= 0 ? 'text-[var(--c-entrada)]' : 'text-[var(--c-salida)]'}`}>
+                    {formatSol((resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0))}
+                  </p>
+                  <p className="text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mt-2 tracking-widest">
+                    {usuario.rol === 'ADMINISTRADOR' ? `Suma consolidada (${formatFechaCompleta(fechaSeleccionada)})` : `Balance neto sede (${formatFechaCompleta(fechaSeleccionada)})`}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-black text-[var(--c-entrada)]">INGRESOS: {formatSol(resumenDiario[fechaSeleccionada]?.ingresos || 0)}</p>
+                  <p className="text-[10px] font-black text-[var(--c-salida)]">EGRESOS: {formatSol(resumenDiario[fechaSeleccionada]?.egresos || 0)}</p>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm relative overflow-hidden group">
+          <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm relative overflow-hidden group flex flex-col justify-center">
             <div className="relative z-10">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[var(--c-texto-sub)] mb-2">Cajas Habilitadas</p>
               <p className="text-4xl font-black font-heading text-[var(--c-primario)] tracking-tight">{cajas.length}</p>
@@ -213,11 +241,117 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Dinero por Sedes Card - High UX / No empty space */}
+        {usuario.rol === 'ADMINISTRADOR' && (
+          <div className="mb-12 animate-fadeIn">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {sedes.map((s, index) => {
+                const saldoSede = getSaldoTotalSede(s._id);
+                const inferior = saldoSede < 500;
+                const isAbancay = s.nombre.toLowerCase().includes('abancay');
+                
+                return (
+                  <div key={s._id} className="bg-[var(--c-fondo-card)] rounded-[28px] p-8 border border-[var(--c-borde)] shadow-sm relative overflow-hidden group hover:border-[var(--c-accion)]/30 transition-all">
+                    {/* Decorative Background Sede Icon / Number */}
+                    <div className="absolute -right-4 -bottom-4 opacity-[0.03] pointer-events-none transition-transform group-hover:scale-110 group-hover:-rotate-12">
+                      <p className="text-[120px] font-black leading-none uppercase">{s.nombre.substring(0, 1)}</p>
+                    </div>
+                    
+                    <div className="relative z-10">
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--c-accion)] mb-1">Saldo Regional</p>
+                          <h3 className="text-2xl font-black font-heading text-[var(--c-primario)] uppercase tracking-tight">{s.nombre}</h3>
+                        </div>
+                        <div className={`p-3 rounded-2xl ${isAbancay ? 'bg-purple-500/10 text-purple-600' : 'bg-green-500/10 text-green-600'} border border-current/10`}>
+                          <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-end justify-between">
+                        <div>
+                          <p className={`text-4xl font-black font-heading tracking-tighter ${inferior ? 'text-salida' : 'text-entrada'}`}>
+                            {formatSol(saldoSede)}
+                          </p>
+                          <p className="text-[10px] font-bold text-[var(--c-texto-sub)] uppercase mt-2 opacity-60">Capital Disponible en Sede</p>
+                        </div>
+                        {inferior && (
+                          <div className="flex flex-col items-end">
+                            <span className="text-[9px] font-black text-salida bg-salida/10 px-3 py-1 rounded-full border border-salida/20 animate-pulse mb-1 uppercase tracking-widest">Alerta de Liquidez</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Capital Distribution - ONLY FOR ADMIN */}
+        {usuario.rol === 'ADMINISTRADOR' && (
+          <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm flex flex-col md:flex-row items-center gap-10 mb-10 animate-fadeIn">
+            <div className="flex-1 w-full h-[300px]">
+              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)] mb-6">
+                Distribución de Capital
+              </h3>
+              <ResponsiveContainer width="100%" height={300} minWidth={0}>
+                <PieChart>
+                  <Pie
+                    data={datosAgrupadosChart}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={60}
+                    outerRadius={100}
+                    paddingAngle={2}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {datosAgrupadosChart.map((g, index) => (
+                      <Cell key={`cell-${index}`} fill={g.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    formatter={(value, name) => [`S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`, name]}
+                    contentStyle={{ 
+                      backgroundColor: 'var(--c-fondo-card)', 
+                      borderRadius: '16px', 
+                      border: '1px solid var(--c-borde)',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      textTransform: 'uppercase'
+                    }} 
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-12 gap-y-4 shrink-0 pr-10 max-h-[300px] overflow-y-auto custom-scrollbar w-full md:w-auto">
+                {cajas.map((c, i) => (
+                  <div key={i} className="flex items-center gap-3 py-1">
+                    <div className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color_primario || '#3B59DA' }}></div>
+                    <div>
+                      <p className="text-[9px] font-black uppercase tracking-wider text-[var(--c-texto-sub)] flex items-center gap-2">
+                        {c.nombre_caja}
+                        <span className="text-[7px] bg-[var(--c-secundario)] px-1 rounded border border-[var(--c-borde)]">
+                          {c.id_sede?.nombre || 'Sede'}
+                        </span>
+                      </p>
+                      <p className="text-sm font-black text-[var(--c-primario)]">{formatSol(c.saldo_actual)}</p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+          </div>
+        )}
+
         {/* Charts Section */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
           <div className="premium-card h-[400px] flex flex-col">
             <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)] mb-6">
-              {usuario.rol === 'ADMINISTRADOR' ? 'Volumen Operativo por Sede' : 'Actividad Diaria por Caja'}
+              {usuario.rol === 'ADMINISTRADOR' ? `Volumen por Sede (${formatFechaCompleta(fechaSeleccionada)})` : `Actividad Caja (${formatFechaCompleta(fechaSeleccionada)})`}
             </h3>
             <div className="flex-1 min-h-[300px] flex items-center justify-center">
               {chartData.inner[0].name === 'Sin Movimientos' ? (
@@ -229,12 +363,13 @@ const Dashboard = () => {
                 <ResponsiveContainer width="100%" height={300} minWidth={0}>
                   <PieChart>
                     <Tooltip 
-                      contentStyle={{ background: 'var(--c-fondo-card)', border: '1px solid var(--c-accion)', borderRadius: '12px', fontSize: '11px', fontWeight: 'bold' }}
+                      contentStyle={{ background: 'var(--c-fondo-card)', border: '1px solid var(--c-accion)', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}
                       itemStyle={{ color: 'var(--c-texto)' }}
                       formatter={(value, name, props) => {
                         if (name.includes('Total')) return [`S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })}`, name];
+                        const { ingresos, egresos, neto } = props.payload;
                         return [
-                          `S/ ${value.toLocaleString('es-PE', { minimumFractionDigits: 2 })} (Ing: S/${props.payload.ingresos} | Egr: S/${props.payload.egresos})`,
+                          `S/ ${neto.toLocaleString('es-PE', { minimumFractionDigits: 2 })} (Ing: S/${ingresos} | Egr: S/${egresos})`,
                           name
                         ];
                       }}
@@ -263,63 +398,39 @@ const Dashboard = () => {
           </div>
 
           <div className="premium-card h-[400px] flex flex-col">
-            {usuario.rol === 'ADMINISTRADOR' ? (
-              <>
-                <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)] mb-6">Estado de Sedes</h3>
-                <div className="overflow-y-auto pr-2 custom-scrollbar flex-1">
-                  {sedes.map(s => {
-                    const total = getSaldoTotalSede(s._id);
-                    const inferior = total < 500;
-                    return (
-                      <div key={s._id} className="p-4 bg-secundario rounded-xl mb-4 border border-[var(--c-accion)]/5 flex justify-between items-center transition-all hover:border-[var(--c-accion)]/30">
-                        <div>
-                          <p className="font-bold text-primario">{s.nombre}</p>
-                          <p className="text-[10px] text-texto-sub uppercase font-bold">{s.direccion}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className={`font-black ${inferior ? 'text-salida' : 'text-entrada'}`}>{formatSol(total)}</p>
-                          {inferior && <p className="text-[9px] text-salida font-bold uppercase animate-pulse">Bajo Mínimo</p>}
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </>
-            ) : (
-              <div className="flex flex-col h-full">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)]">Calendario de Actividad</h3>
-                  {fechaSeleccionada === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() && (
-                    <span className="flex items-center gap-1.5 text-[8px] font-black text-[var(--c-entrada)] bg-[var(--c-success-pastel)] px-2 py-0.5 rounded-full animate-pulse">
-                      <span className="w-1 h-1 bg-[var(--c-entrada)] rounded-full"></span>
-                      EN VIVO
-                    </span>
-                  )}
+            <div className="flex flex-col h-full">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)]">Calendario de Actividad</h3>
+                {usuario.rol === 'ADMINISTRADOR' && (
+                  <span className="text-[10px] font-black text-[var(--c-texto-sub)] uppercase">Auditoría Global</span>
+                )}
+                {fechaSeleccionada === (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })() && (
+                  <span className="flex items-center gap-1.5 text-[8px] font-black text-[var(--c-entrada)] bg-[var(--c-success-pastel)] px-2 py-0.5 rounded-full animate-pulse">
+                    <span className="w-1 h-1 bg-[var(--c-entrada)] rounded-full"></span>
+                    EN VIVO
+                  </span>
+                )}
+              </div>
+              
+              <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar">
+                <div className="mb-6">
+                  {renderCalendario()}
                 </div>
                 
-                <div className="flex-1 flex flex-col">
-                  <div className="mb-8">
-                    {renderCalendario()}
-                  </div>
-                  
-                  <div className="space-y-3">
-                    {[
-                      { label: 'Ingresos del Día', val: resumenDiario[fechaSeleccionada]?.ingresos || 0, col: 'var(--c-entrada)' },
-                      { label: 'Egresos del Día', val: resumenDiario[fechaSeleccionada]?.egresos || 0, col: 'var(--c-salida)' },
-                      { label: 'Balance Neto', val: (resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0), col: 'var(--c-accion)' }
-                    ].map(stat => (
-                      <div key={stat.label} className="px-4 py-3 rounded-2xl border border-[var(--c-borde)] bg-[var(--c-fondo)] flex justify-between items-center shadow-inner group hover:border-[var(--c-accion)]/20 transition-all">
-                        <p className="text-[8px] font-black uppercase tracking-widest text-[var(--c-texto-sub)]">{stat.label}</p>
-                        <p className="text-sm font-black font-heading" style={{ color: stat.col }}>{formatSol(stat.val)}</p>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="mt-4 text-[8px] text-[var(--c-texto-sub)] font-bold uppercase text-center opacity-40 italic">
-                    Seleccione un día del grid para auditar cambios
-                  </p>
+                <div className="space-y-3">
+                  {[
+                    { label: 'Ingresos del Día', val: resumenDiario[fechaSeleccionada]?.ingresos || 0, col: 'var(--c-entrada)' },
+                    { label: 'Egresos del Día', val: resumenDiario[fechaSeleccionada]?.egresos || 0, col: 'var(--c-salida)' },
+                    { label: 'Balance Neto', val: (resumenDiario[fechaSeleccionada]?.ingresos || 0) - (resumenDiario[fechaSeleccionada]?.egresos || 0), col: 'var(--c-accion)' }
+                  ].map(stat => (
+                    <div key={stat.label} className="px-4 py-3 rounded-2xl border border-[var(--c-borde)] bg-[var(--c-fondo)] flex justify-between items-center shadow-inner group hover:border-[var(--c-accion)]/20 transition-all">
+                      <p className="text-[8px] font-black uppercase tracking-widest text-[var(--c-texto-sub)]">{stat.label}</p>
+                      <p className="text-sm font-black font-heading" style={{ color: stat.col }}>{formatSol(stat.val)}</p>
+                    </div>
+                  ))}
                 </div>
               </div>
-            )}
+            </div>
           </div>
         </div>
 
@@ -367,8 +478,8 @@ const Dashboard = () => {
                       </div>
 
                       {inferior && (
-                        <div className="p-2 bg-salida/10 rounded-lg border border-salida/20 text-center mb-4">
-                          <p className="text-[9px] text-salida font-bold uppercase tracking-tighter">Alerta de liquidez mínima</p>
+                        <div className="p-2 bg-[#FEF2F2] rounded-lg border border-[#FEE2E2] text-center mb-4">
+                          <p className="text-[9px] text-[#991B1B] font-bold uppercase tracking-tighter">Alerta de liquidez mínima</p>
                         </div>
                       )}
 

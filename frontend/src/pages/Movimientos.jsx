@@ -324,12 +324,14 @@ const Movimientos = () => {
         )}
 
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
-          <div>
-            <h1 className="text-3xl font-heading text-primario mb-2">Gestión de Movimientos</h1>
-            <p className="text-texto-sub">Control de entradas, salidas y reportes mensuales</p>
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 animate-fadeIn">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-heading font-black text-[var(--c-primario)]">Gestión de Movimientos</h1>
+            <p className="text-[var(--c-texto-sub)] font-medium flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-[var(--c-accion)] rounded-full"></span>
+              Operaciones de Caja y Registro de Transacciones
+            </p>
           </div>
-
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -337,19 +339,19 @@ const Movimientos = () => {
           {/* Main Form Card */}
           <div className="lg:col-span-2">
             <div className="premium-card animate-slide-up">
-              <h2 className="text-xl mb-6 flex items-center gap-3">
+              <h3 className="text-sm font-black uppercase tracking-widest text-[var(--c-accion)] mb-8 flex items-center gap-3">
                 <span className={`p-2 rounded-xl ${editMode ? 'bg-[var(--c-accion-pastel)] text-[var(--c-accion)]' : 'bg-[var(--c-accion)]/10 text-[var(--c-accion)]'}`}>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={editMode ? "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" : "M12 4v16m8-8H4"} />
                   </svg>
                 </span>
-                {editMode ? 'Editando Movimiento' : 'Nuevo Registro'}
-              </h2>
+                {editMode ? 'Editando Movimiento' : 'Nuevo Registro de Operación'}
+              </h3>
 
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-8">
                 <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider ml-1">Fecha de Registro</label>
+                    <label className="block text-[10px] font-black text-[var(--c-primario)] uppercase tracking-widest ml-1">Fecha de Registro</label>
                     <input
                       type="date"
                       name="fecha"
@@ -362,7 +364,7 @@ const Movimientos = () => {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider ml-1">Caja Origen/Destino</label>
+                    <label className="block text-[10px] font-black text-[var(--c-primario)] uppercase tracking-widest ml-1">Caja Origen/Destino</label>
                     <select
                       name="id_caja"
                       value={formData.id_caja}
@@ -378,7 +380,7 @@ const Movimientos = () => {
                     </select>
                   </div>
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider ml-1">Tipo de Operación</label>
+                    <label className="block text-[10px] font-black text-[var(--c-primario)] uppercase tracking-widest ml-1">Tipo de Operación</label>
                     <div className={`flex bg-[var(--c-secundario)] p-1 rounded-xl border border-[var(--c-borde)] h-[42px] ${editMode ? 'opacity-50 pointer-events-none' : ''}`}>
                       <button
                         type="button"

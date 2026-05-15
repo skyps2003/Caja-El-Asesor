@@ -214,13 +214,14 @@ const AdminDashboard = () => {
           
           <div className="flex flex-col md:flex-row md:items-end justify-between mb-12 gap-6 animate-fadeIn">
             <div className="space-y-1">
-              <h1 className="text-4xl font-heading font-bold text-[var(--c-primario)]">Gestión Administrativa</h1>
+              <h1 className="text-4xl font-heading font-black text-[var(--c-primario)]">Gestión Administrativa</h1>
               <p className="text-[var(--c-texto-sub)] font-medium flex items-center gap-2">
                 <span className="w-1.5 h-1.5 bg-[var(--c-accion)] rounded-full"></span>
                 Control de Infraestructura y Usuarios
               </p>
             </div>
           </div>
+
 
           {/* Navigation Tabs - Segmented Control Style */}
           <div className="flex bg-[var(--c-secundario)] p-1.5 rounded-2xl border border-[var(--c-borde)] mb-10 w-fit backdrop-blur-md">
@@ -233,7 +234,7 @@ const AdminDashboard = () => {
               <button
                 key={tab.id}
                 onClick={() => cambiarTab(tab.id)}
-                className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-bold text-xs uppercase tracking-wider transition-all duration-300 ${
+                className={`flex items-center gap-2.5 px-6 py-3 rounded-xl font-black text-xs uppercase tracking-wider transition-all duration-300 ${
                   tabActiva === tab.id 
                     ? 'bg-[var(--c-fondo-card)] shadow-lg shadow-black/5 text-[var(--c-primario)] border border-[var(--c-borde)]' 
                     : 'text-[var(--c-texto-sub)] hover:text-[var(--c-primario)] hover:bg-black/5'
@@ -456,65 +457,6 @@ const AdminDashboard = () => {
             </table>
           </div>
         </div>
-          {/* Capital Distribution Chart */}
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 mt-10 mb-10 animate-fadeIn delay-100">
-            <div className="lg:col-span-12">
-              <div className="bg-[var(--c-fondo-card)] rounded-[24px] p-8 border border-[var(--c-borde)] shadow-sm flex flex-col md:flex-row items-center gap-10">
-                <div className="flex-1 w-full h-[300px]">
-                  <h3 className="text-xs font-black uppercase tracking-widest text-[var(--c-primario)] mb-6 flex items-center gap-2">
-                    <span className="w-2 h-2 bg-[var(--c-accion)] rounded-full"></span>
-                    Distribución de Capital
-                  </h3>
-                  <ResponsiveContainer width="100%" height={300} minWidth={0}>
-                    <PieChart>
-                      <Pie
-                        data={cajas.map(c => {
-                          return { name: c.nombre_caja, value: c.saldo_actual, color: c.color_primario || '#3B59DA' };
-                        })}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={60}
-                        outerRadius={100}
-                        paddingAngle={2}
-                        dataKey="value"
-                        animationBegin={200}
-                        animationDuration={1500}
-                        stroke="none"
-                      >
-                        {cajas.map((c, index) => (
-                          <Cell key={`cell-${index}`} fill={c.color_primario || '#3B59DA'} />
-                        ))}
-                      </Pie>
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'var(--c-fondo-card)', 
-                          borderRadius: '16px', 
-                          border: '1px solid var(--c-borde)',
-                          fontSize: '11px',
-                          fontWeight: '800',
-                          textTransform: 'uppercase'
-                        }} 
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="grid grid-cols-2 gap-x-12 gap-y-6 shrink-0 pr-10 max-h-[300px] overflow-y-auto custom-scrollbar">
-                   {cajas.map((c, i) => (
-                     <div key={i} className="flex items-center gap-3">
-                        <div className="w-3 h-3 rounded-full shrink-0" style={{ background: c.color_primario }}></div>
-                        <div>
-                          <p className="text-[9px] font-black uppercase tracking-wider text-[var(--c-texto-sub)] flex items-center gap-2">
-                            {c.nombre_caja}
-                            <span className="text-[7px] bg-[var(--c-secundario)] px-1 rounded border border-[var(--c-borde)]">{c.id_sede?.nombre || 'Sede Local'}</span>
-                          </p>
-                          <p className="text-sm font-black text-[var(--c-primario)]">S/ {c.saldo_actual.toLocaleString('es-PE', { minimumFractionDigits: 2 })}</p>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-              </div>
-            </div>
-          </div>
 
       </div>
 
