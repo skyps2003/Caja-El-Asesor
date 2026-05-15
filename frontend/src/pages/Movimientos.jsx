@@ -21,6 +21,10 @@ const Movimientos = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [cajaFilter, setCajaFilter] = useState('');
 
+  // Estados para Edición
+  const [editMode, setEditMode] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+
   const [formData, setFormData] = useState({
     id_caja: cajaIdParam || '',
     tipo: false,
@@ -125,8 +129,6 @@ const Movimientos = () => {
     setCargandoForm(true);
     setShowConfirmModal(false);
     try {
-      // Asegurar que la fecha se envíe con una hora neutral (mediodía) 
-      // para evitar saltos de día por zona horaria en el backend
       const [year, month, day] = formData.fecha.split('-').map(Number);
       const fechaParaBackend = new Date(year, month - 1, day, 12, 0, 0);
 
@@ -150,7 +152,7 @@ const Movimientos = () => {
       toast.success(`Movimiento registrado exitosamente. Saldo resultante: ${formatSol(data.movimiento.saldo_resultante)}`);
 
       setFormData({
-        id_caja: formData.id_caja, // Mantener la caja seleccionada
+        id_caja: formData.id_caja, 
         tipo: false,
         concepto: '',
         monto: '',
@@ -166,6 +168,73 @@ const Movimientos = () => {
       cargarDatos();
     } catch (error) {
       toast.error(error.response?.data?.mensaje || 'Error al registrar el movimiento');
+    } finally {
+      setCargandoForm(false);
+    }
+  };
+
+  const handleEdit = (mov) => {
+    setEditMode(true);
+    setEditingId(mov._id);
+    setFormData({
+      id_caja: mov.id_caja?._id || mov.id_caja,
+      tipo: mov.tipo,
+      concepto: mov.concepto,
+      monto: mov.monto,
+      fecha: new Date(mov.fecha_hora).toISOString().split('T')[0],
+      tipo_comprobante: mov.tipo_comprobante || 'SIN_COMPROBANTE',
+      numero_comprobante: mov.numero_comprobante || '',
+      ruc: mov.ruc || '',
+      razon_social: mov.razon_social || '',
+      entidad_comprobante: mov.entidad_comprobante || '',
+      observaciones: mov.observaciones || '',
+    });
+    document.querySelector('main')?.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const cancelarEdicion = () => {
+    setEditMode(false);
+    setEditingId(null);
+    setFormData({
+      id_caja: cajaIdParam || '',
+      tipo: false,
+      concepto: '',
+      monto: '',
+      fecha: new Date().toISOString().split('T')[0],
+      tipo_comprobante: 'SIN_COMPROBANTE',
+      numero_comprobante: '',
+      ruc: '',
+      razon_social: '',
+      entidad_comprobante: '',
+      observaciones: '',
+    });
+  };
+
+  const confirmarEdicion = async () => {
+    setCargandoForm(true);
+    setShowConfirmModal(false);
+    try {
+      const [year, month, day] = formData.fecha.split('-').map(Number);
+      const fechaParaBackend = new Date(year, month - 1, day, 12, 0, 0);
+
+      const payload = {
+        fecha_hora: fechaParaBackend.toISOString(),
+        concepto: formData.concepto,
+        monto: Number(formData.monto),
+        tipo_comprobante: formData.tipo_comprobante,
+        numero_comprobante: formData.numero_comprobante || null,
+        entidad_comprobante: formData.tipo_comprobante === 'RECIBO' ? formData.entidad_comprobante : null,
+        ruc: formData.tipo_comprobante === 'FACTURA' ? formData.ruc : null,
+        razon_social: formData.tipo_comprobante === 'FACTURA' ? formData.razon_social : null,
+        observaciones: formData.observaciones,
+      };
+
+      await API.put(`/movimientos/${editingId}`, payload);
+      toast.success('Movimiento actualizado exitosamente');
+      cancelarEdicion();
+      cargarDatos();
+    } catch (error) {
+      toast.error(error.response?.data?.mensaje || 'Error al actualizar el movimiento');
     } finally {
       setCargandoForm(false);
     }
@@ -192,13 +261,22 @@ const Movimientos = () => {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-[var(--c-fondo-card)] w-full max-w-md rounded-[24px] shadow-2xl border border-[var(--c-borde)] overflow-hidden animate-slide-up">
               <div className="p-8 text-center">
-                <div className="w-16 h-16 bg-[var(--c-accion-pastel)] text-[var(--c-accion)] rounded-full flex items-center justify-center mx-auto mb-6">
-                  <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-black text-[var(--c-primario)] mb-2 uppercase tracking-tight">¿Confirmar Movimiento?</h3>
-                <p className="text-xs text-[var(--c-texto-sub)] font-medium mb-8 uppercase tracking-widest">Verifica los datos antes de proceder</p>
+                <h3 className="text-xl font-black text-[var(--c-primario)] mb-2 uppercase tracking-tight">
+                  {editMode ? '¿Confirmar Edición?' : '¿Confirmar Movimiento?'}
+                </h3>
+                
+                {editMode ? (
+                  <div className="bg-[var(--c-accion-pastel)] border border-[var(--c-accion)]/20 rounded-xl p-3 mb-6 flex items-start gap-3">
+                    <svg className="w-5 h-5 text-[var(--c-accion)] shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="text-[10px] text-[var(--c-accion)] font-bold leading-tight text-left uppercase">
+                      Atención: Al cambiar el monto, se recalcularán automáticamente todos los saldos posteriores.
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--c-texto-sub)] font-medium mb-8 uppercase tracking-widest">Verifica los datos antes de proceder</p>
+                )}
                 
                 <div className="bg-[var(--c-secundario)] rounded-2xl p-6 space-y-4 mb-8 text-left border border-[var(--c-borde)]">
                   <div className="flex justify-between items-center pb-3 border-b border-[var(--c-borde)]/60">
@@ -234,10 +312,10 @@ const Movimientos = () => {
                     Cancelar
                   </button>
                   <button
-                    onClick={confirmarRegistro}
+                    onClick={editMode ? confirmarEdicion : confirmarRegistro}
                     className="py-3.5 px-6 rounded-xl text-xs font-black uppercase tracking-widest bg-[var(--c-accion)] text-white shadow-lg shadow-[var(--c-accion)]/20 hover:bg-[var(--c-accion-hover)] transition-all"
                   >
-                    Sí, Guardar
+                    {editMode ? 'Confirmar Cambios' : 'Sí, Guardar'}
                   </button>
                 </div>
               </div>
@@ -260,12 +338,12 @@ const Movimientos = () => {
           <div className="lg:col-span-2">
             <div className="premium-card animate-slide-up">
               <h2 className="text-xl mb-6 flex items-center gap-3">
-                <span className="p-2 bg-[var(--c-accion)]/10 text-[var(--c-accion)]">
+                <span className={`p-2 rounded-xl ${editMode ? 'bg-[var(--c-accion-pastel)] text-[var(--c-accion)]' : 'bg-[var(--c-accion)]/10 text-[var(--c-accion)]'}`}>
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={editMode ? "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" : "M12 4v16m8-8H4"} />
                   </svg>
                 </span>
-                Nuevo Registro
+                {editMode ? 'Editando Movimiento' : 'Nuevo Registro'}
               </h2>
 
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -290,7 +368,8 @@ const Movimientos = () => {
                       value={formData.id_caja}
                       onChange={handleChange}
                       required
-                      className="premium-input !bg-[var(--c-fondo-card)] !text-xs !h-[42px]"
+                      disabled={editMode}
+                      className={`premium-input !bg-[var(--c-fondo-card)] !text-xs !h-[42px] ${editMode ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                       <option value="">Seleccionar Cuenta...</option>
                       {cajas.map(c => (
@@ -300,7 +379,7 @@ const Movimientos = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="block text-xs font-bold text-[var(--c-primario)] uppercase tracking-wider ml-1">Tipo de Operación</label>
-                    <div className="flex bg-[var(--c-secundario)] p-1 rounded-xl border border-[var(--c-borde)] h-[42px]">
+                    <div className={`flex bg-[var(--c-secundario)] p-1 rounded-xl border border-[var(--c-borde)] h-[42px] ${editMode ? 'opacity-50 pointer-events-none' : ''}`}>
                       <button
                         type="button"
                         onClick={() => setFormData(p => ({ ...p, tipo: false }))}
@@ -493,15 +572,24 @@ const Movimientos = () => {
                   />
                 </div>
 
-                <div className="pt-6">
+                <div className={`pt-6 ${editMode ? 'grid grid-cols-2 gap-4' : ''}`}>
+                  {editMode && (
+                    <button
+                      type="button"
+                      onClick={cancelarEdicion}
+                      className="w-full py-4 rounded-xl text-xs font-bold uppercase border border-red-200 text-red-500 hover:bg-red-50 transition-all"
+                    >
+                      Cancelar
+                    </button>
+                  )}
                   <button
                     type="submit"
                     disabled={cargandoForm}
-                    className="btn-gold !w-full !py-4 !text-base shadow-xl"
+                    className={`btn-gold !w-full !py-4 !text-sm shadow-xl ${editMode ? '!bg-[var(--c-accion)] !border-[var(--c-accion)]' : ''}`}
                   >
                     {cargandoForm ? (
                       <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    ) : 'Finalizar Registro de Movimiento'}
+                    ) : editMode ? 'Actualizar Registro' : 'Finalizar Registro'}
                   </button>
                 </div>
               </form>
@@ -645,6 +733,7 @@ const Movimientos = () => {
                   <th className="text-right">Monto</th>
                   <th className="text-right">Saldo Resultante</th>
                   <th>Comprobante</th>
+                  <th className="text-center">Acciones</th>
                 </tr>
               </thead>
               <tbody>
@@ -689,6 +778,19 @@ const Movimientos = () => {
                         <div className="flex flex-col gap-0.5">
                           <span className="text-[9px] font-black text-[var(--c-primario)] opacity-50">{mov.tipo_comprobante || 'S/C'}</span>
                           <span className="text-[10px] font-mono font-bold text-[var(--c-accion)]">{mov.numero_comprobante || '—'}</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div className="flex justify-center">
+                          <button
+                            onClick={() => handleEdit(mov)}
+                            className="p-2 hover:bg-amber-50 text-amber-600 rounded-lg transition-colors group"
+                            title="Editar registro"
+                          >
+                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
                         </div>
                       </td>
                     </tr>

@@ -9,6 +9,7 @@ import Movimientos from './pages/Movimientos';
 import AdminDashboard from './pages/AdminDashboard';
 import Cierres from './pages/Cierres';
 import ComprobantesPage from './pages/ComprobantesPage';
+import Documentos from './pages/Documentos';
 
 function App() {
   return (
@@ -58,6 +59,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['ADMIN_SISTEMA', 'ADMIN_SEDE']}>
                   <ComprobantesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/documentos"
+              element={
+                <ProtectedRoute allowedRoles={['ADMINISTRADOR']}>
+                  <Documentos />
                 </ProtectedRoute>
               }
             />

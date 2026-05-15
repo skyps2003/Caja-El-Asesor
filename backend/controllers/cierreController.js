@@ -199,10 +199,22 @@ exports.previsualizarCierre = async (req, res) => {
 // ─── GET /api/cierres/movimientos-periodo — Movimientos de la sede por rango de fechas ─
 exports.movimientosPeriodo = async (req, res) => {
   try {
-    const idSede = await obtenerIdSede(req);
-    const { tipo = 'DIARIO', fecha } = req.query; // tipo: DIARIO | MENSUAL, fecha: YYYY-MM-DD o YYYY-MM
-    const cajas = await getCajasDeSede(idSede);
-    const cajaIds = cajas.map(c => c._id);
+    let idSede;
+    const { tipo = 'DIARIO', fecha, sedeId } = req.query;
+
+    if (req.usuario.rol === 'ADMINISTRADOR' && sedeId) {
+      if (sedeId === 'todas') {
+        const todasLasCajas = await Caja.find({}).select('_id');
+        var cajaIds = todasLasCajas.map(c => c._id);
+      } else {
+        const cajasSede = await Caja.find({ id_sede: sedeId }).select('_id');
+        var cajaIds = cajasSede.map(c => c._id);
+      }
+    } else {
+      idSede = await obtenerIdSede(req);
+      const cajas = await getCajasDeSede(idSede);
+      var cajaIds = cajas.map(c => c._id);
+    }
 
     let fechaDesde, fechaHasta;
     if (tipo === 'DIARIO') {

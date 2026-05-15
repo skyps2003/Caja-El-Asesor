@@ -184,10 +184,99 @@ const actualizarEstadoMovimiento = async (req, res) => {
     res.status(500).json({ mensaje: 'Error al actualizar estado', error: error.message });
   }
 };
+// ── Actualizar datos de movimiento (CON RECALCULO DE SALDO) ──
+const actualizarMovimiento = async (req, res) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { id } = req.params;
+    const {
+      fecha_hora,
+      concepto,
+      monto,
+      tipo_comprobante,
+      numero_comprobante,
+      ruc,
+      razon_social,
+      entidad_comprobante,
+      observaciones
+    } = req.body;
+
+    const movimientoOriginal = await Movimiento.findById(id).session(session);
+    if (!movimientoOriginal) {
+      await session.abortTransaction();
+      session.endSession();
+      return res.status(404).json({ mensaje: 'Movimiento no encontrado' });
+    }
+
+    const updateData = {};
+    if (fecha_hora) updateData.fecha_hora = new Date(fecha_hora);
+    if (concepto !== undefined) updateData.concepto = concepto;
+    if (tipo_comprobante !== undefined) updateData.tipo_comprobante = tipo_comprobante;
+    if (numero_comprobante !== undefined) updateData.numero_comprobante = numero_comprobante;
+    if (ruc !== undefined) updateData.ruc = ruc;
+    if (razon_social !== undefined) updateData.razon_social = razon_social;
+    if (entidad_comprobante !== undefined) updateData.entidad_comprobante = entidad_comprobante;
+    if (observaciones !== undefined) updateData.observaciones = observaciones;
+
+    // ── Si el monto ha cambiado, recalcular saldos ──────────
+    if (monto !== undefined && monto !== movimientoOriginal.monto) {
+      const viejoEfecto = movimientoOriginal.tipo === false || movimientoOriginal.tipo === 0 ? movimientoOriginal.monto : -movimientoOriginal.monto;
+      const nuevoEfecto = movimientoOriginal.tipo === false || movimientoOriginal.tipo === 0 ? monto : -monto;
+      const cambioEnSaldo = nuevoEfecto - viejoEfecto;
+
+      updateData.monto = monto;
+      updateData.saldo_resultante = movimientoOriginal.saldo_resultante + cambioEnSaldo;
+
+      // Actualizar saldos de movimientos posteriores
+      await Movimiento.updateMany(
+        { 
+          id_caja: movimientoOriginal.id_caja, 
+          fecha_hora: { $gt: movimientoOriginal.fecha_hora } 
+        },
+        { $inc: { saldo_resultante: cambioEnSaldo } }
+      ).session(session);
+
+      await Movimiento.updateMany(
+        { 
+          id_caja: movimientoOriginal.id_caja, 
+          fecha_hora: movimientoOriginal.fecha_hora,
+          _id: { $gt: movimientoOriginal._id }
+        },
+        { $inc: { saldo_resultante: cambioEnSaldo } }
+      ).session(session);
+
+      // Actualizar saldo_actual de la caja
+      await Caja.findByIdAndUpdate(
+        movimientoOriginal.id_caja,
+        { $inc: { saldo_actual: cambioEnSaldo } }
+      ).session(session);
+    }
+
+    const movimientoActualizado = await Movimiento.findByIdAndUpdate(
+      id,
+      updateData,
+      { returnDocument: 'after', session }
+    ).populate('id_caja', 'codigo nombre_caja')
+     .populate('id_usuario', 'login_usuario rol');
+
+    await session.commitTransaction();
+    session.endSession();
+
+    res.json({ mensaje: 'Movimiento actualizado exitosamente', movimiento: movimientoActualizado });
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error(error);
+    res.status(500).json({ mensaje: 'Error al actualizar movimiento', error: error.message });
+  }
+};
 
 module.exports = {
   crearMovimiento,
   obtenerMovimientos,
   obtenerMovimientosPorCaja,
   actualizarEstadoMovimiento,
+  actualizarMovimiento,
 };
